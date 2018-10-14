@@ -1,4 +1,4 @@
 apiVersion: "newrelic.shanestarcher.com/v1alpha1"
-kind: "App"
+kind: "Dashboard"
 metadata:
   name: "example"

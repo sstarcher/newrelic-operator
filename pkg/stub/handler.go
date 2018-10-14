@@ -2,21 +2,41 @@ package stub
 
 import (
 	"context"
+	"os"
 
 	"github.com/sstarcher/newrelic-operator/pkg/apis/newrelic/v1alpha1"
+	"github.com/sstarcher/newrelic-operator/pkg/stub/newrelic"
 
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
-	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"github.com/prometheus/client_golang/prometheus"
+	log "github.com/sirupsen/logrus"
 )
 
 func NewHandler(m *Metrics) sdk.Handler {
+	client, err := newrelic.NewClient()
+	if err != nil {
+		panic(err)
+	}
+
+	clean := os.Getenv("NEW_RELIC_OPERATOR_CLEANUP")
+	if clean != "" {
+		list, err := client.ListDashboards(context.Background())
+		if err != nil {
+			panic(err)
+		}
+		for _, item := range list {
+			if item.OwnerEmail != nil && *item.OwnerEmail == clean {
+				err := client.DeleteDashboard(context.Background(), *item.ID)
+				if err != nil {
+					panic(err)
+				}
+			}
+		}
+	}
+
 	return &Handler{
 		metrics: m,
+		client:  client,
 	}
 }
 
@@ -27,56 +47,49 @@ type Metrics struct {
 type Handler struct {
 	// Metrics example
 	metrics *Metrics
-
-	// Fill me
+	client  *newrelic.Client
 }
 
 func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
 	switch o := event.Object.(type) {
-	case *v1alpha1.App:
-		err := sdk.Create(newbusyBoxPod(o))
-		if err != nil && !errors.IsAlreadyExists(err) {
-			logrus.Errorf("failed to create busybox pod : %v", err)
-			// increment error metric
-			h.metrics.operatorErrors.Inc()
-			return err
+	case *v1alpha1.AlertChannel:
+		log.Printf("channel", o)
+	case *v1alpha1.AlertPolicy:
+		log.Printf("policy", o)
+	case *v1alpha1.Dashboard:
+		if event.Deleted {
+			log.Printf("deleting dashboard %s/%s", o.Namespace, o.Name)
+			if o.Status.ID != nil {
+				return h.client.DeleteDashboard(ctx, *o.Status.ID)
+			}
+		} else if o.Status.IsCreated() {
+			if o.HasChanged() {
+				log.Printf("update dashboard %s/%s %d", o.Namespace, o.Name, o.Status.ID)
+				err := h.client.UpdateDashboard(ctx, o.Spec.Data, *o.Status.ID)
+				if err != nil {
+					o.Status.Info = err.Error()
+					return sdk.Update(o)
+				}
+				o.Update()
+				sdk.Update(o)
+			}
+		} else {
+			log.Printf("creating dashboard %s/%s", o.Namespace, o.Name)
+			id, err := h.client.CreateDashboard(ctx, o.Spec.Data)
+			if err != nil {
+				o.Status.Info = err.Error()
+				return sdk.Update(o)
+			}
+
+			o.Created(*id)
+			sdk.Update(o)
 		}
+	case *v1alpha1.Label:
+		log.Printf("label", o)
+	case *v1alpha1.Monitor:
+		log.Printf("monitor", o)
 	}
 	return nil
-}
-
-// newbusyBoxPod demonstrates how to create a busybox pod
-func newbusyBoxPod(cr *v1alpha1.App) *corev1.Pod {
-	labels := map[string]string{
-		"app": "busy-box",
-	}
-	return &corev1.Pod{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Pod",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "busy-box",
-			Namespace: cr.Namespace,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(cr, schema.GroupVersionKind{
-					Group:   v1alpha1.SchemeGroupVersion.Group,
-					Version: v1alpha1.SchemeGroupVersion.Version,
-					Kind:    "App",
-				}),
-			},
-			Labels: labels,
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:    "busybox",
-					Image:   "docker.io/busybox",
-					Command: []string{"sleep", "3600"},
-				},
-			},
-		},
-	}
 }
 
 func RegisterOperatorMetrics() (*Metrics, error) {

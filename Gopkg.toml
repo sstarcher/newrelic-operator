@@ -56,3 +56,7 @@ required = [
   # The version rule is used for a specific release and the master branch for in between releases.
   branch = "master" #osdk_branch_annotation
   # version = "=v0.0.6" #osdk_version_annotation
+
+[[constraint]]
+  name = "github.com/IBM/newrelic-cli"
+  version = "0.1.4"

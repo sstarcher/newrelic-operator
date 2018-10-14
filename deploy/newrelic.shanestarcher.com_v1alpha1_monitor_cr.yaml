@@ -1,0 +1,4 @@
+apiVersion: "newrelic.shanestarcher.com/v1alpha1"
+kind: "Monitor"
+metadata:
+  name: "example"

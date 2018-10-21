@@ -10,7 +10,8 @@ import (
 	stub "github.com/sstarcher/newrelic-operator/pkg/stub"
 
 	"github.com/sirupsen/logrus"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	_ "github.com/sstarcher/newrelic-operator/pkg/apis/newrelic/v1alpha1"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 
 func printVersion() {

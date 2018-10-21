@@ -59,4 +59,4 @@ required = [
 
 [[constraint]]
   name = "github.com/IBM/newrelic-cli"
-  version = "0.1.4"
+  version = "4932c52b93012bdecc29d70606cb4f2b18a12e74"

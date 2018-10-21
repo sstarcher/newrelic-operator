@@ -1,0 +1,6 @@
+apiVersion: "newrelic.shanestarcher.com/v1alpha1"
+kind: "AlertPolicy"
+metadata:
+  name: "example"
+spec:
+  incident_preference: test

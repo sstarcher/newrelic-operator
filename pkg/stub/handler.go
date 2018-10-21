@@ -2,10 +2,8 @@ package stub
 
 import (
 	"context"
-	"os"
 
 	"github.com/sstarcher/newrelic-operator/pkg/apis/newrelic/v1alpha1"
-	"github.com/sstarcher/newrelic-operator/pkg/stub/newrelic"
 
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	"github.com/prometheus/client_golang/prometheus"
@@ -13,30 +11,8 @@ import (
 )
 
 func NewHandler(m *Metrics) sdk.Handler {
-	client, err := newrelic.NewClient()
-	if err != nil {
-		panic(err)
-	}
-
-	clean := os.Getenv("NEW_RELIC_OPERATOR_CLEANUP")
-	if clean != "" {
-		list, err := client.ListDashboards(context.Background())
-		if err != nil {
-			panic(err)
-		}
-		for _, item := range list {
-			if item.OwnerEmail != nil && *item.OwnerEmail == clean {
-				err := client.DeleteDashboard(context.Background(), *item.ID)
-				if err != nil {
-					panic(err)
-				}
-			}
-		}
-	}
-
 	return &Handler{
 		metrics: m,
-		client:  client,
 	}
 }
 
@@ -47,47 +23,29 @@ type Metrics struct {
 type Handler struct {
 	// Metrics example
 	metrics *Metrics
-	client  *newrelic.Client
 }
 
 func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
 	switch o := event.Object.(type) {
-	case *v1alpha1.AlertChannel:
-		log.Printf("channel", o)
-	case *v1alpha1.AlertPolicy:
-		log.Printf("policy", o)
-	case *v1alpha1.Dashboard:
+	case v1alpha1.CRD:
+		logger := log.WithFields(log.Fields{"signature": o.Signature()})
 		if event.Deleted {
-			log.Printf("deleting dashboard %s/%s", o.Namespace, o.Name)
-			if o.Status.ID != nil {
-				return h.client.DeleteDashboard(ctx, *o.Status.ID)
-			}
-		} else if o.Status.IsCreated() {
+			logger.Infof("deleting")
+			o.Delete(ctx)
+		} else if o.IsCreated() {
 			if o.HasChanged() {
-				log.Printf("update dashboard %s/%s %d", o.Namespace, o.Name, o.Status.ID)
-				err := h.client.UpdateDashboard(ctx, o.Spec.Data, *o.Status.ID)
-				if err != nil {
-					o.Status.Info = err.Error()
-					return sdk.Update(o)
-				}
-				o.Update()
-				sdk.Update(o)
+				logger.Infof("update %s", o.GetID())
+				o.Update(ctx)
 			}
 		} else {
-			log.Printf("creating dashboard %s/%s", o.Namespace, o.Name)
-			id, err := h.client.CreateDashboard(ctx, o.Spec.Data)
+			logger.Info("creating")
+			err := o.Create(ctx)
 			if err != nil {
-				o.Status.Info = err.Error()
-				return sdk.Update(o)
+				logger.Error(err)
 			}
-
-			o.Created(*id)
-			sdk.Update(o)
 		}
-	case *v1alpha1.Label:
-		log.Printf("label", o)
-	case *v1alpha1.Monitor:
-		log.Printf("monitor", o)
+	default:
+		log.Warnf("recieved a event we don't have a CRD for %s", o)
 	}
 	return nil
 }

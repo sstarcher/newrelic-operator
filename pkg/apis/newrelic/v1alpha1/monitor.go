@@ -17,15 +17,35 @@ type MonitorList struct {
 type Monitor struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              MonitorSpec   `json:"spec"`
-	Status            MonitorStatus `json:"status,omitempty"`
+	Spec              Spec   `json:"spec"`
+	Status            Status `json:"status,omitempty"`
 }
 
 type MonitorSpec struct {
-	ID   *int64  `json:"id,omitempty"`
-	Name *string `json:"name,omitempty"`
+	ID           *string        `json:"id,omitempty"`
+	Name         *string        `json:"name,omitempty"`
+	Type         *string        `json:"type,omitempty"`
+	Frequency    *int64         `json:"frequency,omitempty"`
+	URI          *string        `json:"uri,omitempty"`
+	Locations    []*string      `json:"locations,omitempty"`
+	Status       *string        `json:"status,omitempty"`
+	SLAThreshold *float64       `json:"slaThreshold,omitempty"`
+	UserID       *int64         `json:"userId,omitempty"`
+	APIVersion   *string        `json:"apiVersion,omitempty"`
+	CreatedAt    *string        `json:"createdAt,omitempty"`
+	UpdatedAt    *string        `json:"modifiedAt,omitempty"`
+	Options      MonitorOptions `json:"options,omitempty"`
+	Script       *Script        `json:"script,omitempty"`
+	Labels       []*string      `json:"labels,omitempty"`
 }
 
-type MonitorStatus struct {
-	Status string
+type MonitorOptions struct {
+	ValidationString       *string `json:"validationString,omitempty"`
+	VerifySSL              bool    `json:"verifySSL,omitempty"`
+	BypassHEADRequest      bool    `json:"bypassHEADRequest,omitempty"`
+	TreatRedirectAsFailure bool    `json:"treatRedirectAsFailure,omitempty"`
+}
+
+type Script struct {
+	ScriptText *string `json:"scriptText,omitempty"`
 }

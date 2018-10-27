@@ -30,7 +30,7 @@ func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
 	case v1alpha1.CRD:
 		logger := log.WithFields(log.Fields{"signature": o.Signature()})
 		if event.Deleted {
-			logger.Infof("deleting")
+			logger.Infof("delete")
 			o.Delete(ctx)
 		} else if o.IsCreated() {
 			if o.HasChanged() {
@@ -38,7 +38,7 @@ func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
 				o.Update(ctx)
 			}
 		} else {
-			logger.Info("creating")
+			logger.Info("create")
 			err := o.Create(ctx)
 			if err != nil {
 				logger.Error(err)

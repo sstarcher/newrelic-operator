@@ -55,7 +55,7 @@ func (s *Dashboard) Create(ctx context.Context) error {
 		return err
 	}
 
-	created(*result.Dashboard.ID, &s.Status, &s.Spec)
+	createdInt(*result.Dashboard.ID, &s.Status, &s.Spec)
 	sdk.Update(s)
 	return nil
 }
@@ -65,7 +65,8 @@ func (s *Dashboard) Delete(ctx context.Context) error {
 	if s.Status.ID == nil {
 		return fmt.Errorf("dashboard object has not been created %s", s.ObjectMeta.Name)
 	}
-	rsp, _, err := client.Dashboards.DeleteByID(ctx, *s.Status.ID)
+
+	rsp, _, err := client.Dashboards.DeleteByID(ctx, s.Status.GetID())
 	err = handleError(rsp, err)
 	if err != nil {
 		return err
@@ -77,7 +78,7 @@ func (s *Dashboard) Delete(ctx context.Context) error {
 // GetID for the new relic object
 func (s *Dashboard) GetID() string {
 	if s.Status.ID != nil {
-		return string(*s.Status.ID)
+		return *s.Status.ID
 	}
 	return "nil"
 }
@@ -89,7 +90,7 @@ func (s *Dashboard) Signature() string {
 
 // Update object in newrelic
 func (s *Dashboard) Update(ctx context.Context) error {
-	rsp, _, err := client.Dashboards.Update(ctx, s.Spec.Data, *s.Status.ID)
+	rsp, _, err := client.Dashboards.Update(ctx, s.Spec.Data, s.Status.GetID())
 	err = handleError(rsp, err)
 	if err != nil {
 		s.Status.Info = err.Error()

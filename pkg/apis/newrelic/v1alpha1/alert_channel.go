@@ -3,7 +3,6 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/IBM/newrelic-cli/newrelic"
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
@@ -68,10 +67,6 @@ func (s *AlertChannel) Create(ctx context.Context) error {
 		},
 	}
 
-	if s.Status.ID != nil {
-		data.AlertsChannel.ID = s.Status.ID
-	}
-
 	if s.Spec.Links != nil {
 		data.AlertsChannel.Links = &newrelic.AlertsChannelLinks{
 			s.Spec.Links.PolicyIDs,
@@ -86,7 +81,7 @@ func (s *AlertChannel) Create(ctx context.Context) error {
 		return err
 	}
 
-	created(*channels.AlertsChannels[0].ID, &s.Status, &s.Spec)
+	createdInt(*channels.AlertsChannels[0].ID, &s.Status, &s.Spec)
 	sdk.Update(s)
 	return nil
 }
@@ -96,7 +91,7 @@ func (s *AlertChannel) Delete(ctx context.Context) error {
 	if s.Status.ID == nil {
 		return fmt.Errorf("alert channel object has not been created %s", s.ObjectMeta.Name)
 	}
-	rsp, err := client.AlertsChannels.DeleteByID(ctx, *s.Status.ID)
+	rsp, err := client.AlertsChannels.DeleteByID(ctx, s.Status.GetID())
 	err = handleError(rsp, err)
 	if err != nil {
 		return err
@@ -108,7 +103,7 @@ func (s *AlertChannel) Delete(ctx context.Context) error {
 // GetID for the new relic object
 func (s *AlertChannel) GetID() string {
 	if s.Status.ID != nil {
-		return strconv.FormatInt(*s.Status.ID, 10)
+		return *s.Status.ID
 	}
 	return "nil"
 }

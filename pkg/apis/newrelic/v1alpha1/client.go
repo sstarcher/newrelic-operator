@@ -10,6 +10,7 @@ import (
 )
 
 var client *newrelic.Client
+var clientSythetics *newrelic.Client
 
 func init() {
 	var err error
@@ -18,16 +19,10 @@ func init() {
 		panic(err)
 	}
 
-	// list := &DashboardList{
-	// 	TypeMeta: metav1.TypeMeta{
-	// 		APIVersion: fmt.Sprintf("%s/%s", groupName, version),
-	// 		Kind:       "DashboardList",
-	// 	},
-	// }
-	// err = sdk.List("", list)
-	// if err != nil {
-	// 	panic(err)
-	// }
+	clientSythetics, err = utils.GetNewRelicClient("synthetics")
+	if err != nil {
+		panic(err)
+	}
 
 	clean := os.Getenv("NEW_RELIC_OPERATOR_CLEANUP")
 	if clean != "" {

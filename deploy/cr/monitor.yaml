@@ -1,4 +1,6 @@
 apiVersion: "newrelic.shanestarcher.com/v1alpha1"
 kind: "Monitor"
 metadata:
-  name: "example"
+  name: "test"
+spec:
+  uri: https://google.com

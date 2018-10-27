@@ -33,8 +33,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&AlertPolicyList{},
 		&Dashboard{},
 		&DashboardList{},
-		&Label{},
-		&LabelList{},
 		&Monitor{},
 		&MonitorList{},
 	)

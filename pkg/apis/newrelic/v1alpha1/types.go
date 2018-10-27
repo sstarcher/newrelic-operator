@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"reflect"
+	"strconv"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -47,9 +48,9 @@ func (s *Spec) GetSum() []byte {
 }
 
 type Status struct {
-	ID   *int64 `json:"id,omitempty"`
-	Info string `json:"info,omitempty"`
-	Hash []byte `json:"hash,omitempty"`
+	ID   *string `json:"id,omitempty"`
+	Info string  `json:"info,omitempty"`
+	Hash []byte  `json:"hash,omitempty"`
 }
 
 // IsCreated let us know if the dashboard exists
@@ -59,6 +60,16 @@ func (s *Status) IsCreated() bool {
 
 func (s *Status) GetSum() []byte {
 	return s.Hash
+}
+
+func (s *Status) GetID() int64 {
+	id, _ := strconv.ParseInt(*s.ID, 10, 64)
+	return id
+}
+
+func (s *Status) SetID(id int64) {
+	str := strconv.FormatInt(id, 10)
+	s.ID = &str
 }
 
 func (s *Status) SetSum(data []byte) {
@@ -76,10 +87,14 @@ func update(spec SpecInterface, status StatusInterface) {
 }
 
 // Update the hash
-func created(id int64, status *Status, spec SpecInterface) {
+func created(id string, status *Status, spec SpecInterface) {
 	status.ID = &id
 	status.Info = "Created"
 	update(spec, status)
+}
+
+func createdInt(id int64, status *Status, spec SpecInterface) {
+	created(strconv.FormatInt(id, 10), status, spec)
 }
 
 func sum(data []byte) []byte {

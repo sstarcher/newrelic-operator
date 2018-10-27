@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"github.com/IBM/newrelic-cli/newrelic"
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+var _ CRD = &AlertPolicy{}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -68,7 +69,7 @@ func (s *AlertPolicy) Create(ctx context.Context) error {
 		return err
 	}
 
-	created(*data.AlertsPolicy.ID, &s.Status, &s.Spec)
+	createdInt(*data.AlertsPolicy.ID, &s.Status, &s.Spec)
 	return sdk.Update(s)
 }
 
@@ -77,7 +78,7 @@ func (s *AlertPolicy) Delete(ctx context.Context) error {
 	if s.Status.ID == nil {
 		return fmt.Errorf("alert Policy object has not been created %s", s.ObjectMeta.Name)
 	}
-	rsp, err := client.AlertsPolicies.DeleteByID(ctx, *s.Status.ID)
+	rsp, err := client.AlertsPolicies.DeleteByID(ctx, s.Status.GetID())
 	err = handleError(rsp, err)
 	if err != nil {
 		return err
@@ -89,7 +90,7 @@ func (s *AlertPolicy) Delete(ctx context.Context) error {
 // GetID for the new relic object
 func (s *AlertPolicy) GetID() string {
 	if s.Status.ID != nil {
-		return strconv.FormatInt(*s.Status.ID, 10)
+		return *s.Status.ID
 	}
 	return "nil"
 }
@@ -107,7 +108,7 @@ func (s *AlertPolicy) Update(ctx context.Context) error {
 			IncidentPreference: newrelic.IncidentPerPolicy,
 		},
 	}
-	data, rsp, err := client.AlertsPolicies.Update(ctx, data, *s.Status.ID)
+	data, rsp, err := client.AlertsPolicies.Update(ctx, data, s.Status.GetID())
 	err = handleError(rsp, err)
 	if err != nil {
 		s.Status.Info = err.Error()

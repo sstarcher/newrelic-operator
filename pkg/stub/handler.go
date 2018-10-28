@@ -6,12 +6,8 @@ import (
 	"github.com/sstarcher/newrelic-operator/pkg/apis/newrelic/v1alpha1"
 
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
-	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"github.com/prometheus/client_golang/prometheus"
+	log "github.com/sirupsen/logrus"
 )
 
 func NewHandler(m *Metrics) sdk.Handler {
@@ -27,56 +23,31 @@ type Metrics struct {
 type Handler struct {
 	// Metrics example
 	metrics *Metrics
-
-	// Fill me
 }
 
 func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
 	switch o := event.Object.(type) {
-	case *v1alpha1.App:
-		err := sdk.Create(newbusyBoxPod(o))
-		if err != nil && !errors.IsAlreadyExists(err) {
-			logrus.Errorf("failed to create busybox pod : %v", err)
-			// increment error metric
-			h.metrics.operatorErrors.Inc()
-			return err
+	case v1alpha1.CRD:
+		logger := log.WithFields(log.Fields{"signature": o.Signature()})
+		if event.Deleted {
+			logger.Infof("delete")
+			o.Delete(ctx)
+		} else if o.IsCreated() {
+			if o.HasChanged() {
+				logger.Infof("update %s", o.GetID())
+				o.Update(ctx)
+			}
+		} else {
+			logger.Info("create")
+			err := o.Create(ctx)
+			if err != nil {
+				logger.Error(err)
+			}
 		}
+	default:
+		log.Warnf("recieved a event we don't have a CRD for %s", o)
 	}
 	return nil
-}
-
-// newbusyBoxPod demonstrates how to create a busybox pod
-func newbusyBoxPod(cr *v1alpha1.App) *corev1.Pod {
-	labels := map[string]string{
-		"app": "busy-box",
-	}
-	return &corev1.Pod{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Pod",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "busy-box",
-			Namespace: cr.Namespace,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(cr, schema.GroupVersionKind{
-					Group:   v1alpha1.SchemeGroupVersion.Group,
-					Version: v1alpha1.SchemeGroupVersion.Version,
-					Kind:    "App",
-				}),
-			},
-			Labels: labels,
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:    "busybox",
-					Image:   "docker.io/busybox",
-					Command: []string{"sleep", "3600"},
-				},
-			},
-		},
-	}
 }
 
 func RegisterOperatorMetrics() (*Metrics, error) {

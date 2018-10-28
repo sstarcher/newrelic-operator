@@ -5,13 +5,13 @@ import (
 	"runtime"
 	"time"
 
-	stub "github.com/sstarcher/newrelic-operator/pkg/stub"
 	sdk "github.com/operator-framework/operator-sdk/pkg/sdk"
-	k8sutil "github.com/operator-framework/operator-sdk/pkg/util/k8sutil"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
+	stub "github.com/sstarcher/newrelic-operator/pkg/stub"
 
 	"github.com/sirupsen/logrus"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	_ "github.com/sstarcher/newrelic-operator/pkg/apis/newrelic/v1alpha1"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 
 func printVersion() {
@@ -31,14 +31,13 @@ func main() {
 	h := stub.NewHandler(metrics)
 
 	resource := "newrelic.shanestarcher.com/v1alpha1"
-	kind := "App"
-	namespace, err := k8sutil.GetWatchNamespace()
-	if err != nil {
-		logrus.Fatalf("failed to get watch namespace: %v", err)
-	}
 	resyncPeriod := time.Duration(5) * time.Second
-	logrus.Infof("Watching %s, %s, %s, %d", resource, kind, namespace, resyncPeriod)
-	sdk.Watch(resource, kind, namespace, resyncPeriod)
+	logrus.Infof("Watching %s, %d", resource, resyncPeriod)
+	sdk.Watch(resource, "AlertChannel", "", resyncPeriod)
+	sdk.Watch(resource, "AlertPolicy", "", resyncPeriod)
+	sdk.Watch(resource, "Dashboard", "", resyncPeriod)
+	sdk.Watch(resource, "Label", "", resyncPeriod)
+	sdk.Watch(resource, "Monitor", "", resyncPeriod)
 	sdk.Handle(h)
 	sdk.Run(context.TODO())
 }

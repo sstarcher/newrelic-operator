@@ -36,7 +36,6 @@ func main() {
 	sdk.Watch(resource, "AlertChannel", "", resyncPeriod)
 	sdk.Watch(resource, "AlertPolicy", "", resyncPeriod)
 	sdk.Watch(resource, "Dashboard", "", resyncPeriod)
-	sdk.Watch(resource, "Label", "", resyncPeriod)
 	sdk.Watch(resource, "Monitor", "", resyncPeriod)
 	sdk.Handle(h)
 	sdk.Run(context.TODO())

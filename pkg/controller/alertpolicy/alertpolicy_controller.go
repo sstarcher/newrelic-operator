@@ -1,0 +1,98 @@
+package alertpolicy
+
+import (
+	"context"
+
+	log "github.com/sirupsen/logrus"
+
+	newrelicv1alpha1 "github.com/sstarcher/newrelic-operator/pkg/apis/newrelic/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
+)
+
+/**
+* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
+* business logic.  Delete these comments after modifying this file.*
+ */
+
+// Add creates a new AlertPolicy Controller and adds it to the Manager. The Manager will set fields on the Controller
+// and Start it when the Manager is Started.
+func Add(mgr manager.Manager) error {
+	return add(mgr, newReconciler(mgr))
+}
+
+// newReconciler returns a new reconcile.Reconciler
+func newReconciler(mgr manager.Manager) reconcile.Reconciler {
+	return &ReconcileAlertPolicy{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+}
+
+// add adds a new Controller to mgr with r as the reconcile.Reconciler
+func add(mgr manager.Manager, r reconcile.Reconciler) error {
+	// Create a new controller
+	c, err := controller.New("alertpolicy-controller", mgr, controller.Options{Reconciler: r})
+	if err != nil {
+		return err
+	}
+
+	// Watch for changes to primary resource AlertPolicy
+	err = c.Watch(&source.Kind{Type: &newrelicv1alpha1.AlertPolicy{}}, &handler.EnqueueRequestForObject{})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var _ reconcile.Reconciler = &ReconcileAlertPolicy{}
+
+// ReconcileAlertPolicy reconciles a AlertPolicy object
+type ReconcileAlertPolicy struct {
+	// This client, initialized using mgr.Client() above, is a split client
+	// that reads objects from the cache and writes to the apiserver
+	client client.Client
+	scheme *runtime.Scheme
+}
+
+// Reconcile reads that state of the cluster for a AlertPolicy object and makes changes based on the state read
+// and what is in the AlertPolicy.Spec
+// TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
+// a Pod as an example
+// Note:
+// The Controller will requeue the Request to be processed again if the returned error is non-nil or
+// Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
+func (r *ReconcileAlertPolicy) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	// Fetch the AlertPolicy instance
+	instance := &newrelicv1alpha1.AlertPolicy{}
+	logger := log.WithFields(log.Fields{"type": "alertpolicy", "name": request.Name, "namespace": request.Namespace})
+	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			logger.Infof("delete")
+			instance.Delete(context.TODO())
+			return reconcile.Result{}, nil
+		}
+		// Error reading the object - requeue the request.
+		return reconcile.Result{}, err
+	}
+
+	if instance.IsCreated() {
+		if instance.HasChanged() {
+			logger.Infof("update %s", instance.GetID())
+			instance.Update(context.TODO())
+		}
+	} else {
+		logger.Info("create")
+		err := instance.Create(context.TODO())
+		if err != nil {
+			logger.Error(err)
+		}
+	}
+
+	return reconcile.Result{}, r.client.Update(context.TODO(), instance)
+}

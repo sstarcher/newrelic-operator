@@ -1,8 +1,0 @@
-apiVersion: "newrelic.shanestarcher.com/v1alpha1"
-kind: "AlertChannel"
-metadata:
-  name: "example"
-spec:
-  configuration:
-    recipients: "example@example.com"
-    include_json_attachment: "true"

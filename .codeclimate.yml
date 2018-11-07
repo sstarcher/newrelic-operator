@@ -1,0 +1,5 @@
+plugins:
+  govet:
+    enabled: true
+exclude_patterns:
+- "pkg/apis/newrelic/v1alpha1/zz_generated.deepcopy.go"

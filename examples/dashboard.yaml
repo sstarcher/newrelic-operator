@@ -2,3 +2,17 @@ apiVersion: "newrelic.shanestarcher.com/v1alpha1"
 kind: "Dashboard"
 metadata:
   name: "example"
+spec:
+  Data: '{
+  "dashboard": {
+    "title": "Test",
+    "description": null,
+    "icon": "bar-chart",
+    "visibility": "all",
+    "editable": "editable_by_owner",
+    "metadata": {
+      "version": 1
+    },
+    "widgets": []
+   }
+}'

@@ -7,3 +7,5 @@ Gopkg.lock
 Gopkg.toml
 LICENSE
 README.md
+test
+Makefile

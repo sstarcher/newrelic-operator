@@ -78,10 +78,11 @@ func (s *AlertChannel) Create(ctx context.Context) error {
 
 // Delete in newrelic
 func (s *AlertChannel) Delete(ctx context.Context) error {
-	if s.Status.ID == nil {
+	id := s.Status.GetID()
+	if id == nil {
 		return fmt.Errorf("alert channel object has not been created %s", s.ObjectMeta.Name)
 	}
-	rsp, err := client.AlertsChannels.DeleteByID(ctx, s.Status.GetID())
+	rsp, err := client.AlertsChannels.DeleteByID(ctx, *id)
 	err = handleError(rsp, err)
 	if err != nil {
 		return err

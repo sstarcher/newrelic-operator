@@ -30,7 +30,8 @@ type AlertPolicy struct {
 }
 
 type AlertPolicySpec struct {
-	IncidentPreference string `json:"incident_preference,omitempty"`
+	IncidentPreference string   `json:"incident_preference,omitempty"`
+	Channels           []string `json:"channels,omitempty"`
 }
 
 func (s AlertPolicySpec) GetSum() []byte {
@@ -68,7 +69,7 @@ func (s *AlertPolicy) Create(ctx context.Context) error {
 	}
 
 	for _, value := range channels.AlertsChannels {
-		fmt.Println(*value.Name)
+		log.Debugf("channel %s", *value.Name)
 	}
 
 	data, rsp, err := client.AlertsPolicies.Create(ctx, data)
@@ -79,15 +80,21 @@ func (s *AlertPolicy) Create(ctx context.Context) error {
 	}
 
 	createdInt(*data.AlertsPolicy.ID, &s.Status, &s.Spec)
+
+	// if s.Spec.Channels != nil {
+	// 	for _, channel := range s.Spec.Channels {
+	// 	}
+	// }
 	return nil
 }
 
 // Delete in newrelic
 func (s *AlertPolicy) Delete(ctx context.Context) error {
-	if s.Status.ID == nil {
+	id := s.Status.GetID()
+	if id == nil {
 		return fmt.Errorf("alert Policy object has not been created %s", s.ObjectMeta.Name)
 	}
-	rsp, err := client.AlertsPolicies.DeleteByID(ctx, s.Status.GetID())
+	rsp, err := client.AlertsPolicies.DeleteByID(ctx, *id)
 	err = handleError(rsp, err)
 	if err != nil {
 		return err
@@ -118,7 +125,12 @@ func (s *AlertPolicy) Update(ctx context.Context) error {
 		},
 	}
 
-	data, rsp, err := client.AlertsPolicies.Update(ctx, data, s.Status.GetID())
+	id := s.Status.GetID()
+	if id == nil {
+		return fmt.Errorf("alert Policy object has not been created %s", s.ObjectMeta.Name)
+	}
+
+	data, rsp, err := client.AlertsPolicies.Update(ctx, data, *id)
 	err = handleError(rsp, err)
 	if err != nil {
 		s.Status.Info = err.Error()

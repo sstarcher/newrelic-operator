@@ -54,25 +54,28 @@ type Status struct {
 }
 
 // IsCreated let us know if the dashboard exists
-func (s *Status) IsCreated() bool {
+func (s Status) IsCreated() bool {
 	return s.ID != nil
 }
 
-func (s *Status) GetSum() []byte {
+func (s Status) GetSum() []byte {
 	return s.Hash
 }
 
-func (s *Status) GetID() int64 {
+func (s Status) GetID() *int64 {
+	if s.ID == nil {
+		return nil
+	}
 	id, _ := strconv.ParseInt(*s.ID, 10, 64)
-	return id
+	return &id
 }
 
-func (s *Status) SetID(id int64) {
+func (s Status) SetID(id int64) {
 	str := strconv.FormatInt(id, 10)
 	s.ID = &str
 }
 
-func (s *Status) SetSum(data []byte) {
+func (s Status) SetSum(data []byte) {
 	s.Hash = data
 }
 

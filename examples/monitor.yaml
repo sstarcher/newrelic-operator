@@ -1,6 +1,20 @@
 apiVersion: "newrelic.shanestarcher.com/v1alpha1"
 kind: "Monitor"
 metadata:
-  name: "test"
+  name: "google"
 spec:
-  uri: https://google.com
+  uri: https://google.com # required
+  type: simple # default
+  frequency: 10 # default
+  locations:
+    - AWS_US_WEST_1 # default
+  status: enabled # default
+  slaThreshold: 1.0 # optional
+  options:
+    validationString: # optional
+    verifySSL: # optional
+    bypassHEADRequest: # optional
+    treatRedirectAsFailure: # optional
+  conditions:
+    - policyName: google
+      runbookURL: https://google.com

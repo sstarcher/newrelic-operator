@@ -1,0 +1,22 @@
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: newrelic-operator
+rules:
+- apiGroups:
+  - newrelic.shanestarcher.com
+  resources:
+  - '*'
+  - alertchannels
+  - alertpolicies
+  - dashboards
+  - monitors
+  verbs:
+  - '*'
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - "get"
+  - "create"

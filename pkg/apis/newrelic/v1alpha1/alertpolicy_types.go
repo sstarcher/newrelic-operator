@@ -63,17 +63,6 @@ func (s *AlertPolicy) Create(ctx context.Context) error {
 		},
 	}
 
-	var opt *newrelic.AlertsChannelListOptions = &newrelic.AlertsChannelListOptions{}
-	channels, _, err := client.AlertsChannels.ListAll(ctx, opt)
-	if err != nil {
-		s.Status.Info = err.Error()
-		return err
-	}
-
-	for _, value := range channels.AlertsChannels {
-		log.Debugf("channel %s", *value.Name)
-	}
-
 	data, rsp, err := client.AlertsPolicies.Create(ctx, data)
 	err = handleError(rsp, err)
 	if err != nil {

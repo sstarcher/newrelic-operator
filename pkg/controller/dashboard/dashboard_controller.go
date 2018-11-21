@@ -69,30 +69,41 @@ type ReconcileDashboard struct {
 func (r *ReconcileDashboard) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	// Fetch the Dashboard instance
 	instance := &newrelicv1alpha1.Dashboard{}
-	logger := log.WithFields(log.Fields{"type": "dashboard", "name": request.Name, "namespace": request.Namespace})
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			logger.Infof("delete")
-			instance.Delete(context.TODO())
+			// Request object not found, could have been deleted after reconcile request.
+			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+			// Return and don't requeue
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
 
-	if instance.IsCreated() {
+	logger := log.WithFields(log.Fields{"type": "dashboard", "name": request.Name, "namespace": request.Namespace})
+	ctx := newrelicv1alpha1.WithLogger(context.TODO(), logger)
+
+	if instance.GetDeletionTimestamp() != nil {
+		logger.Infof("delete")
+		err = instance.Delete(ctx)
+		if err != nil {
+			log.Error(err)
+		}
+		instance.SetFinalizers(nil)
+		return reconcile.Result{}, r.client.Update(ctx, instance)
+	} else if instance.IsCreated() {
 		if instance.HasChanged() {
 			logger.Infof("update %s", instance.GetID())
-			instance.Update(context.TODO())
+			instance.Update(ctx)
 		}
 	} else {
 		logger.Info("create")
-		err := instance.Create(context.TODO())
+		err := instance.Create(ctx)
 		if err != nil {
 			logger.Error(err)
 		}
 	}
 
-	return reconcile.Result{}, r.client.Update(context.TODO(), instance)
+	return reconcile.Result{}, r.client.Update(ctx, instance)
 }

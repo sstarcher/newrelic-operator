@@ -30,7 +30,8 @@ type AlertPolicy struct {
 }
 
 type AlertPolicySpec struct {
-	IncidentPreference string `json:"incident_preference,omitempty"`
+	IncidentPreference string   `json:"incident_preference,omitempty"`
+	Channels           []string `json:"channels,omitempty"`
 }
 
 func (s AlertPolicySpec) GetSum() []byte {
@@ -53,22 +54,13 @@ func (s *AlertPolicy) HasChanged() bool {
 
 // Create in newrelic
 func (s *AlertPolicy) Create(ctx context.Context) error {
+	log := GetLogger(ctx)
+
 	data := &newrelic.AlertsPolicyEntity{
 		AlertsPolicy: &newrelic.AlertsPolicy{
 			Name:               &s.ObjectMeta.Name,
 			IncidentPreference: newrelic.IncidentPerPolicy,
 		},
-	}
-
-	var opt *newrelic.AlertsChannelListOptions = &newrelic.AlertsChannelListOptions{}
-	channels, _, err := client.AlertsChannels.ListAll(ctx, opt)
-	if err != nil {
-		s.Status.Info = err.Error()
-		return err
-	}
-
-	for _, value := range channels.AlertsChannels {
-		fmt.Println(*value.Name)
 	}
 
 	data, rsp, err := client.AlertsPolicies.Create(ctx, data)
@@ -79,15 +71,49 @@ func (s *AlertPolicy) Create(ctx context.Context) error {
 	}
 
 	createdInt(*data.AlertsPolicy.ID, &s.Status, &s.Spec)
+	s.SetFinalizers([]string{finalizer})
+
+	if s.Spec.Channels != nil {
+		channels, rsp, err := client.AlertsChannels.ListAll(ctx, nil)
+		err = handleError(rsp, err)
+		if err != nil { // TODO do we need error handling to delete the AlertPolicy that was created above
+			s.Status.Info = err.Error()
+			return err
+		}
+
+		channelIds := []*int64{}
+		for _, channel := range s.Spec.Channels {
+			found := false
+			for _, alertChannel := range channels.AlertsChannels {
+				if channel == *alertChannel.Name {
+					channelIds = append(channelIds, alertChannel.ID)
+					found = true
+					break
+				}
+			}
+			if !found {
+				log.Warnf("unable to find the %s channel", channel)
+			}
+		}
+
+		rsp, err = client.AlertsChannels.UpdatePolicyChannels(ctx, *s.Status.GetID(), channelIds)
+		err = handleError(rsp, err)
+		if err != nil {
+			s.Status.Info = err.Error()
+			return err
+		}
+	}
 	return nil
 }
 
 // Delete in newrelic
 func (s *AlertPolicy) Delete(ctx context.Context) error {
-	if s.Status.ID == nil {
+	id := s.Status.GetID()
+	if id == nil {
 		return fmt.Errorf("alert Policy object has not been created %s", s.ObjectMeta.Name)
 	}
-	rsp, err := client.AlertsPolicies.DeleteByID(ctx, s.Status.GetID())
+
+	rsp, err := client.AlertsPolicies.DeleteByID(ctx, *id)
 	err = handleError(rsp, err)
 	if err != nil {
 		return err
@@ -111,6 +137,7 @@ func (s *AlertPolicy) Signature() string {
 
 // Update object in newrelic
 func (s *AlertPolicy) Update(ctx context.Context) error {
+	// TODO update is creating extra objects
 	data := &newrelic.AlertsPolicyEntity{
 		AlertsPolicy: &newrelic.AlertsPolicy{
 			Name:               &s.ObjectMeta.Name,
@@ -118,7 +145,12 @@ func (s *AlertPolicy) Update(ctx context.Context) error {
 		},
 	}
 
-	data, rsp, err := client.AlertsPolicies.Update(ctx, data, s.Status.GetID())
+	id := s.Status.GetID()
+	if id == nil {
+		return fmt.Errorf("alert Policy object has not been created %s", s.ObjectMeta.Name)
+	}
+
+	data, rsp, err := client.AlertsPolicies.Update(ctx, data, *id)
 	err = handleError(rsp, err)
 	if err != nil {
 		s.Status.Info = err.Error()

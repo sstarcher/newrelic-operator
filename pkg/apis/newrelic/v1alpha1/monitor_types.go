@@ -38,6 +38,7 @@ type MonitorSpec struct {
 	SLAThreshold *float64       `json:"slaThreshold,omitempty"`
 	Options      MonitorOptions `json:"options,omitempty"`
 	Script       *Script        `json:"script,omitempty"`
+	Conditions   []Conditions   `json:"conditions,omitempty"`
 }
 
 type MonitorStatus string
@@ -57,6 +58,11 @@ type MonitorOptions struct {
 	VerifySSL              bool    `json:"verifySSL,omitempty"`
 	BypassHEADRequest      bool    `json:"bypassHEADRequest,omitempty"`
 	TreatRedirectAsFailure bool    `json:"treatRedirectAsFailure,omitempty"`
+}
+
+type Conditions struct {
+	PolicyName string  `json:"policyName,omitempty"`
+	RunbookURL *string `json:"runbookURL,omitempty"`
 }
 
 type Script struct {
@@ -141,17 +147,60 @@ func (s *Monitor) Create(ctx context.Context) error {
 		return err
 	}
 
+	// TODO HTTP 400 could be already exists
+	// TODO when policy error happens ID/finalizer are not being set only the Status
 	created(*data.ID, &s.Status, &s.Spec)
+	s.SetFinalizers([]string{finalizer})
+
+	if s.Spec.Conditions != nil {
+		for _, item := range s.Spec.Conditions {
+			cond := &newrelic.AlertsConditionEntity{
+				AlertsSyntheticsConditionEntity: &newrelic.AlertsSyntheticsConditionEntity{
+					AlertsSyntheticsCondition: &newrelic.AlertsSyntheticsCondition{
+						Name:       &s.Name,
+						MonitorID:  s.Status.ID,
+						RunbookURL: item.RunbookURL,
+					},
+				},
+			}
+
+			policies, rsp, err := client.AlertsPolicies.ListAll(ctx, &newrelic.AlertsPolicyListOptions{
+				NameOptions: item.PolicyName,
+			})
+			err = handleError(rsp, err)
+			if err != nil {
+				s.Status.Info = err.Error()
+				return err
+			}
+
+			if len(policies.AlertsPolicies) != 1 {
+				err = fmt.Errorf("expected a policy search by name to only return 1 result, but recieved %d", len(policies.AlertsPolicies))
+				s.Status.Info = err.Error()
+				return err
+			}
+
+			policyID := *policies.AlertsPolicies[0].ID
+			_, rsp, err = client.AlertsConditions.Create(ctx, newrelic.ConditionSynthetics, cond, policyID)
+			err = handleError(rsp, err)
+			if err != nil {
+				s.Status.Info = err.Error()
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
 // Delete in newrelic
 func (s *Monitor) Delete(ctx context.Context) error {
-	if s.Status.ID == nil {
+	id := s.Status.ID
+	if id == nil {
 		return fmt.Errorf("alert Policy object has not been created %s", s.ObjectMeta.Name)
 	}
 
-	rsp, err := clientSythetics.SyntheticsMonitors.DeleteByID(ctx, s.Status.ID)
+	// TODO Detach alert
+	rsp, err := clientSythetics.SyntheticsMonitors.DeleteByID(ctx, id)
 	err = handleError(rsp, err)
 	if err != nil {
 		return err

@@ -1,18 +1,27 @@
+// Copyright 2018 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package lsp
 
 import (
+	"fmt"
 	"go/token"
 	"strconv"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/internal/lsp/protocol"
+	"golang.org/x/tools/internal/lsp/source"
 )
 
-func (v *view) diagnostics(uri protocol.DocumentURI) (map[string][]protocol.Diagnostic, error) {
-	pkg, err := v.typeCheck(uri)
+func diagnostics(v *source.View, uri source.URI) (map[string][]protocol.Diagnostic, error) {
+	pkg, err := v.GetFile(uri).GetPackage()
 	if err != nil {
 		return nil, err
+	}
+	if pkg == nil {
+		return nil, fmt.Errorf("package for %v not found", uri)
 	}
 	reports := make(map[string][]protocol.Diagnostic)
 	for _, filename := range pkg.GoFiles {

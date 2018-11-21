@@ -6,12 +6,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	_ "github.com/sstarcher/newrelic-operator/pkg/apis/newrelic/v1alpha1"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/sstarcher/newrelic-operator/pkg/apis"
 	"github.com/sstarcher/newrelic-operator/pkg/controller"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
@@ -55,5 +55,9 @@ func main() {
 	}
 
 	// Start the Cmd
-	log.Fatal(mgr.Start(signals.SetupSignalHandler()))
+	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+		log.Fatal(err)
+	} else {
+		log.Info("received shutdown signal")
+	}
 }

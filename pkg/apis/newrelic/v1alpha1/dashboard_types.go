@@ -54,16 +54,18 @@ func (s *Dashboard) Create(ctx context.Context) error {
 	}
 
 	createdInt(*result.Dashboard.ID, &s.Status, &s.Spec)
+	s.SetFinalizers([]string{finalizer})
 	return nil
 }
 
 // Delete in newrelic
 func (s *Dashboard) Delete(ctx context.Context) error {
-	if s.Status.ID == nil {
+	id := s.Status.GetID()
+	if id == nil {
 		return fmt.Errorf("dashboard object has not been created %s", s.ObjectMeta.Name)
 	}
 
-	rsp, _, err := client.Dashboards.DeleteByID(ctx, s.Status.GetID())
+	rsp, _, err := client.Dashboards.DeleteByID(ctx, *id)
 	err = handleError(rsp, err)
 	if err != nil {
 		return err
@@ -87,7 +89,12 @@ func (s *Dashboard) Signature() string {
 
 // Update object in newrelic
 func (s *Dashboard) Update(ctx context.Context) error {
-	rsp, _, err := client.Dashboards.Update(ctx, s.Spec.Data, s.Status.GetID())
+	id := s.Status.GetID()
+	if id == nil {
+		return fmt.Errorf("dashboard object has not been created %s", s.ObjectMeta.Name)
+	}
+
+	rsp, _, err := client.Dashboards.Update(ctx, s.Spec.Data, *id)
 	err = handleError(rsp, err)
 	if err != nil {
 		s.Status.Info = err.Error()

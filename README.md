@@ -31,3 +31,7 @@ __pre-alpha__ This is a work in progress to use the [operator-framework](https:/
 # Installation
 * A helm chart is available in this [repository](./helm/newrelic-operator).
 * To run the environment variable `NEW_RELIC_APIKEY` is required
+
+
+## Todo
+* Replacing resources does not cleanup the original

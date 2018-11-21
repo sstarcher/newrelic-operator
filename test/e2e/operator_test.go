@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -75,10 +74,9 @@ func Monitor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// get global framework variables
-	f := framework.Global
+
 	// wait for newrelic-operator to be ready
-	err = e2eutil.WaitForDeployment(t, f.KubeClient, namespace, "newrelic-operator", 1, retryInterval, timeout)
+	err = e2eutil.WaitForDeployment(t, framework.Global.KubeClient, namespace, "newrelic-operator", 1, retryInterval, timeout)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +89,9 @@ func Monitor(t *testing.T) {
 			IncidentPreference: string(newrelic.IncidentPerCondition),
 		},
 	}
-	err = f.Client.Create(context.TODO(), policy, &framework.CleanupOptions{TestContext: ctx, Timeout: time.Second * 5, RetryInterval: time.Second * 1})
+
+	fmt.Println("creating policy")
+	err = Create(ctx, policy)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,6 +100,27 @@ func Monitor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(policy.Status)
 
+	monitor := &v1alpha1.Monitor{
+		TypeMeta:   NewTypeMeta("Monitor"),
+		ObjectMeta: NewObjectMeta("monitor", namespace),
+		Spec: v1alpha1.MonitorSpec{
+			Conditions: []v1alpha1.Conditions{
+				v1alpha1.Conditions{
+					PolicyName: policy.ObjectMeta.Name,
+				},
+			},
+		},
+	}
+
+	fmt.Println("creating monitor")
+	err = Create(ctx, monitor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = WaitForStatusMonitor(monitor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(monitor)
 }

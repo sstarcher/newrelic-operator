@@ -1,3 +1,7 @@
+// Copyright 2018 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package lsp
 
 import (
@@ -6,11 +10,12 @@ import (
 	"go/format"
 
 	"golang.org/x/tools/internal/lsp/protocol"
+	"golang.org/x/tools/internal/lsp/source"
 )
 
-// format formats a document with a given range.
-func (s *server) format(uri protocol.DocumentURI, rng *protocol.Range) ([]protocol.TextEdit, error) {
-	data, err := s.readActiveFile(uri)
+// formatRange formats a document with a given range.
+func formatRange(v *source.View, uri protocol.DocumentURI, rng *protocol.Range) ([]protocol.TextEdit, error) {
+	data, err := v.GetFile(source.URI(uri)).Read()
 	if err != nil {
 		return nil, err
 	}

@@ -147,10 +147,12 @@ func (s *Monitor) Create(ctx context.Context) error {
 		return err
 	}
 
+	// TODO HTTP 400 could be already exists
+	// TODO when policy error happens ID/finalizer are not being set only the Status
 	created(*data.ID, &s.Status, &s.Spec)
+	s.SetFinalizers([]string{finalizer})
 
 	if s.Spec.Conditions != nil {
-
 		for _, item := range s.Spec.Conditions {
 			cond := &newrelic.AlertsConditionEntity{
 				AlertsSyntheticsConditionEntity: &newrelic.AlertsSyntheticsConditionEntity{
@@ -192,12 +194,13 @@ func (s *Monitor) Create(ctx context.Context) error {
 
 // Delete in newrelic
 func (s *Monitor) Delete(ctx context.Context) error {
-	if s.Status.ID == nil {
+	id := s.Status.ID
+	if id == nil {
 		return fmt.Errorf("alert Policy object has not been created %s", s.ObjectMeta.Name)
 	}
 
 	// TODO Detach alert
-	rsp, err := clientSythetics.SyntheticsMonitors.DeleteByID(ctx, s.Status.ID)
+	rsp, err := clientSythetics.SyntheticsMonitors.DeleteByID(ctx, id)
 	err = handleError(rsp, err)
 	if err != nil {
 		return err

@@ -54,6 +54,7 @@ func (s *Dashboard) Create(ctx context.Context) error {
 	}
 
 	createdInt(*result.Dashboard.ID, &s.Status, &s.Spec)
+	s.SetFinalizers([]string{finalizer})
 	return nil
 }
 

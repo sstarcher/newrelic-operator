@@ -10,14 +10,14 @@
   version = "v0.32.0"
 
 [[projects]]
-  digest = "1:6a38cf17d5c244bb5d5ed5d9719d7e7698d4686545403d5fd6da0586b1581225"
+  digest = "1:34fa3946567fdc7f42d40f015ed98476f24079ca1795cb60103224d05c63b042"
   name = "github.com/IBM/newrelic-cli"
   packages = [
     "newrelic",
     "utils",
   ]
   pruneopts = "NT"
-  revision = "4932c52b93012bdecc29d70606cb4f2b18a12e74"
+  revision = "5db9303c73ca165f361105dd3bb09ba9bd2be8da"
 
 [[projects]]
   digest = "1:d8ebbd207f3d3266d4423ce4860c9f3794956306ded6c7ba312ecc69cdfbf04c"
@@ -103,12 +103,12 @@
   version = "v0.17.2"
 
 [[projects]]
-  branch = "master"
   digest = "1:dfab391de021809e0041f0ab5648da6b74dd16a685472a1b8c3dc06b3dca1ee2"
   name = "github.com/go-openapi/spec"
   packages = ["."]
   pruneopts = "NT"
   revision = "5bae59e25b21498baea7f9d46e9c147ec106a42e"
+  version = "v0.17.2"
 
 [[projects]]
   digest = "1:983f95b2fae6fe8fdd361738325ed6090f4f3bd15ce4db745e899fb5b0fdfc46"
@@ -205,14 +205,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:2a2caa63899dae26ed3e4510b806549fd416d94db24ad68279daa62881b26488"
+  digest = "1:97972f03fbf34ec4247ddc78ddb681389c468c020492aa32b109744a54fc0c14"
   name = "github.com/gregjones/httpcache"
   packages = [
     ".",
     "diskcache",
   ]
   pruneopts = "NT"
-  revision = "9cad4c3443a7200dd6400aef47183728de563a38"
+  revision = "c63ab54fda8f77302f8d414e19933f2b6026a089"
 
 [[projects]]
   digest = "1:b42cde0e1f3c816dd57f57f7bbcf05ca40263ad96f168714c130c611fc0856a6"
@@ -240,14 +240,6 @@
   pruneopts = "NT"
   revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
   version = "v1.0"
-
-[[projects]]
-  digest = "1:ebd0081aed1cd0af2f65a362c0ceea985eae9fe72efb28cefb84eca3b98dd3a3"
-  name = "github.com/jpillora/backoff"
-  packages = ["."]
-  pruneopts = "NT"
-  revision = "8eab2debe79d12b7bd3d10653910df25fa9552ba"
-  version = "1.0.0"
 
 [[projects]]
   digest = "1:1d39c063244ad17c4b18e8da1551163b6ffb52bd1640a49a8ec5c3b7bf4dbd5d"
@@ -395,15 +387,15 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:47924c7ab4b3a18145d150e535525f582a07511e5452c4e1a5b79d883c2a429f"
+  digest = "1:e755223b4f1967d175739744538f2d3c722f67f945457e446cc27d9c97cf0304"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
   pruneopts = "NT"
-  revision = "4d3f4d9ffa16a13f451c3b2999e9c49e9750bf06"
+  revision = "e4dc69e5b2fd71dcaf8bd5d054eb936deb78d1fa"
 
 [[projects]]
   branch = "master"
-  digest = "1:a7fcf4f3e5247a06ad4c28108f0bc1d4ab980a1a0567e7790260cf2d3d77f37d"
+  digest = "1:2b320dd877ed4444048d3d34781a956296dc757824a619767e34bb0dd7fdaaf6"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -414,11 +406,11 @@
     "idna",
   ]
   pruneopts = "NT"
-  revision = "c10e9556a7bc0e7c942242b606f0acf024ad5d6a"
+  revision = "03003ca0c849e57b6ea29a4bab8d3cb6e4d568fe"
 
 [[projects]]
   branch = "master"
-  digest = "1:4274e499d3ba3b75ced5f11c7309b73fdb20fcd16fac58521405288b3f814e60"
+  digest = "1:948ab99b3a990ee11c6beb2d9e65217961897cbc0842acb57aad3d9f63c28f7e"
   name = "golang.org/x/oauth2"
   packages = [
     ".",
@@ -428,18 +420,18 @@
     "jwt",
   ]
   pruneopts = "NT"
-  revision = "232e45548389bd9357411a6922a07c5fd4068bda"
+  revision = "f42d05182288abf10faef86d16c0d07b8d40ea2d"
 
 [[projects]]
   branch = "master"
-  digest = "1:04b92b5bc6c1031cc9083fbc2fdeda90f3a69b7c1bf5eed6bbf9a3563d946c6e"
+  digest = "1:5842bdbec06c1ea8891c369eff3033e9d73c201844b0c34f9ca556b0b8f5063a"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "NT"
-  revision = "9b800f95dbbc54abff0acf7ee32d88ba4e328c89"
+  revision = "66b7b1311ac80bbafcd2daeef9a5e6e2cd1e2399"
 
 [[projects]]
   digest = "1:8c74f97396ed63cc2ef04ebb5fc37bb032871b8fd890a25991ed40974b00cd2a"
@@ -467,15 +459,15 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c9e7a4b4d47c0ed205d257648b0e5b0440880cb728506e318f8ac7cd36270bc4"
+  digest = "1:9fdc2b55e8e0fafe4b41884091e51e77344f7dc511c5acedcfd98200003bff90"
   name = "golang.org/x/time"
   packages = ["rate"]
   pruneopts = "NT"
-  revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
+  revision = "85acf8d2951cb2a3bde7632f9ff273ef0379bcbd"
 
 [[projects]]
   branch = "master"
-  digest = "1:0384cf28db2c82643fa39255b5dd16ad460ff2916111f19e9c7b7b23e4aa8a6c"
+  digest = "1:810b637a8627edebe81f45acb43f1e248cb6a3738bbf61c4df63dc57470de958"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -484,7 +476,7 @@
     "internal/gopathwalk",
   ]
   pruneopts = "NT"
-  revision = "96e9e165b75e735822645eff82850b08c377be36"
+  revision = "6d71ab8aade08605ffc36622332264e2f6991952"
 
 [[projects]]
   digest = "1:2a4972ee51c3b9dfafbb3451fa0552e7a198d9d12c721bfc492050fe2f72e0f6"
@@ -729,7 +721,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c84b5ef38d786290246a9cc791a48b6ed890cd32468179a51a91492161ec6d65"
+  digest = "1:a978780d28f9e77c144c64d0bed9adb9df9e8840e44d9cde722c087177ed5025"
   name = "k8s.io/gengo"
   packages = [
     "args",
@@ -742,10 +734,19 @@
     "types",
   ]
   pruneopts = "NT"
-  revision = "7338e4bfd6915369a1375890db1bbda0158c9863"
+  revision = "7765d7f4899dc5c529e16c90791a600b0914c2a0"
 
 [[projects]]
-  digest = "1:c48a795cd7048bb1888273bc604b6e69b22f9b8089c3df65f77cc527757b515c"
+  branch = "master"
+  digest = "1:ffee5685348009e421410680345cbbd6c79c6592b8c7ed105aadb4d0a759d5f3"
+  name = "k8s.io/klog"
+  packages = ["."]
+  pruneopts = "NT"
+  revision = "8139d8cb77af419532b33dfa7dd09fbc5f1d344f"
+
+[[projects]]
+  branch = "master"
+  digest = "1:ee35efed55bb1633cbcce158c6c357c1f8ffc71131feddbc4eeb86fa22ea04a2"
   name = "k8s.io/kube-openapi"
   packages = [
     "cmd/openapi-gen/args",
@@ -756,7 +757,7 @@
     "pkg/util/sets",
   ]
   pruneopts = "NT"
-  revision = "0cf8f7e6ed1d2e3d47d02e3b6e559369af24d803"
+  revision = "c59034cc13d587f5ef4e85ca0ade0c1866ae8e1d"
 
 [[projects]]
   digest = "1:d1b7a6ed45c957e6308759f31fdbff8063741ecb08b7c3b6d67f0c9f4357b2ae"
@@ -799,7 +800,6 @@
     "github.com/IBM/newrelic-cli/newrelic",
     "github.com/IBM/newrelic-cli/utils",
     "github.com/cenkalti/backoff",
-    "github.com/jpillora/backoff",
     "github.com/operator-framework/operator-sdk/pkg/k8sutil",
     "github.com/operator-framework/operator-sdk/pkg/test",
     "github.com/operator-framework/operator-sdk/pkg/test/e2eutil",

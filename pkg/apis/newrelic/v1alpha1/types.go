@@ -10,6 +10,7 @@ import (
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+var finalizer = "needs-cleanup.newrelic.shanestarcher.com"
 
 type Data struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -20,8 +21,6 @@ type Data struct {
 
 type CRD interface {
 	HasChanged() bool
-	// UpdateStatus()
-	// Created(int64)
 	Create(context.Context) error
 	Update(context.Context) error
 	Delete(context.Context) error

@@ -18,13 +18,12 @@ __pre-alpha__ This is a work in progress to use the [operator-framework](https:/
 
 ## Alert Policy
 * Can be created/updated/deleted
-* Conditions not supported
-* Channels not supported
+* Channels supported
 * [Example](./examples/alert_policy.yaml)
 
 ## Monitor (Synthetics)
 * Can be created/updated/deleted
-* Can't be tied to a policy
+* Can be tied to a policy
 * [Example](./examples/monitor.yaml)
 
 
@@ -35,3 +34,5 @@ __pre-alpha__ This is a work in progress to use the [operator-framework](https:/
 
 ## Todo
 * Replacing resources does not cleanup the original
+* Validate resources prior to calling API
+* Cleanup on errors

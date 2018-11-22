@@ -27,6 +27,8 @@ spec:
           env:
           - name: OPERATOR_NAME
             value: {{ .Chart.Name }}
+          - name: LOG_JSON
+            value: "true"
           - name: WATCH_NAMESPACE
             valueFrom:
               fieldRef:

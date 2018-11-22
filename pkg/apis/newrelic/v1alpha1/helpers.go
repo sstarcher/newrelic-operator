@@ -3,6 +3,8 @@ package v1alpha1
 import (
 	"context"
 
+	"os"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -10,6 +12,12 @@ var (
 	// L is an alias for the the standard logger.
 	L = logrus.NewEntry(logrus.StandardLogger())
 )
+
+func init() {
+	if os.Getenv("LOG_JSON") == "true" {
+		logrus.SetFormatter(&logrus.JSONFormatter{})
+	}
+}
 
 type (
 	loggerKey struct{}

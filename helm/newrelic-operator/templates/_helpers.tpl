@@ -41,3 +41,11 @@ Create the name of the service account to use
     {{ default "default" .Values.serviceAccount.name }}
 {{- end -}}
 {{- end -}}
+
+{{/* Generate basic labels */}}
+{{- define "labels" }}
+app.kubernetes.io/name: {{ template "newrelic-operator.name" . }}
+helm.sh/chart: {{ template "newrelic-operator.chart" . }}
+app.kubernetes.io/managed-by: {{.Release.Service }}
+app.kubernetes.io/instance: {{.Release.Name }}
+{{- end }}

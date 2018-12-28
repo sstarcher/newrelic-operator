@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ template "newrelic-operator.fullname" . }}-cleanup
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "3"
+    "helm.sh/hook-delete-policy": hook-succeeded
+  labels:
+{{ include "labels" . | indent 4 }}
+spec:
+  template:
+    metadata:
+      name: {{ template "newrelic-operator.fullname" . }}-cleanup
+      labels:
+        app.kubernetes.io/name: {{ include "newrelic-operator.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+    {{- if .Values.rbac.create }}
+      serviceAccountName: {{ template "newrelic-operator.serviceAccountName" . }}
+    {{- end }}
+      containers:
+        - name: kubectl
+          image: "{{ .Values.hyperkubeImage.repository }}:{{ .Values.hyperkubeImage.tag }}"
+          imagePullPolicy: "{{ .Values.hyperkubeImage.pullPolicy }}"
+          command:
+          - /bin/sh
+          - -c
+          - >
+              kubectl delete alertchannels --all || true;
+              kubectl delete alertpolicies --all || true;
+              kubectl delete dashboards --all || true;
+              kubectl delete monitors --all || true;
+              sleep 10;
+              kubectl delete crd alertchannels.newrelic.shanestarcher.com;
+              kubectl delete crd alertpolicies.newrelic.shanestarcher.com;
+              kubectl delete crd dashboards.newrelic.shanestarcher.com;
+              kubectl delete crd monitors.newrelic.shanestarcher.com;
+      restartPolicy: OnFailure

@@ -3,10 +3,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   labels:
-    app.kubernetes.io/name: {{ include "newrelic-operator.name" . }}
-    helm.sh/chart: {{ include "newrelic-operator.chart" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{ include "labels" . | indent 4 }}
   name: {{ template "newrelic-operator.fullname" . }}
 rules:
 - apiGroups:
@@ -24,6 +21,12 @@ rules:
   - alertpolicies
   - dashboards
   - monitors
+  verbs:
+  - '*'
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
   verbs:
   - '*'
 {{- end }}

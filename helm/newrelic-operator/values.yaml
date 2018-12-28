@@ -44,3 +44,25 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+customResources:
+  alertChannels:
+  #   example:
+  #     configuration:
+  #       recipients: test@google.com
+  #     type: email
+  alertPolicies:
+  #   example:
+  #     incident_preference: PER_CONDITION # Required PER_POLICY, PER_CONDITION, PER_CONDITION_AND_TARGET
+  #     channels:
+  #       - example
+  #   other:
+  #     incident_preference: PER_POLICY
+  #     channels:
+  #       - example2
+
+
+hyperkubeImage:
+  repository: gcr.io/google-containers/hyperkube
+  tag: v1.12.1
+  pullPolicy: IfNotPresent

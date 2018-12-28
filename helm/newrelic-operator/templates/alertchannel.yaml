@@ -1,0 +1,14 @@
+{{- if .Values.customResources.alertChannels }}
+{{- $top := . -}}
+{{- range $name, $item := .Values.customResources.alertChannels }}
+---
+apiVersion: "newrelic.shanestarcher.com/v1alpha1"
+kind: "AlertChannel"
+metadata:
+  name: {{ template "newrelic-operator.fullname" $top }}-{{ $name }}
+  labels:
+{{ include "labels" $top | indent 4 }}
+spec:
+{{ $item | toYaml | indent 2 }}
+{{- end}}
+{{- end}}

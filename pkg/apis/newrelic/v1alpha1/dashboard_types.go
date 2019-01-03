@@ -82,11 +82,6 @@ func (s *Dashboard) GetID() string {
 	return "nil"
 }
 
-// Signature for the CRD
-func (s *Dashboard) Signature() string {
-	return fmt.Sprintf("%s %s/%s", s.TypeMeta.Kind, s.Namespace, s.Name)
-}
-
 // Update object in newrelic
 func (s *Dashboard) Update(ctx context.Context) error {
 	id := s.Status.GetID()

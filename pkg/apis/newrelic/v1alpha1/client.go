@@ -41,6 +41,15 @@ func init() {
 	}
 }
 
+func handleErrorMessage(format string, rsp *newrelic.Response, err error) error {
+	if err != nil {
+		return fmt.Errorf(format, err)
+	} else if rsp.StatusCode < 200 || rsp.StatusCode >= 300 {
+		return fmt.Errorf(format, rsp)
+	}
+	return nil
+}
+
 func handleError(rsp *newrelic.Response, err error) error {
 	if err != nil {
 		return fmt.Errorf("newrelic api error %v", err)

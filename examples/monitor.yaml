@@ -17,4 +17,4 @@ spec:
     treatRedirectAsFailure: # optional
   conditions:
     - policyName: google
-      runbookURL: https://google.coms
+      runbookURL: https://google.com

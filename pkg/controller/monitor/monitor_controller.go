@@ -89,13 +89,17 @@ func (r *ReconcileMonitor) Reconcile(request reconcile.Request) (reconcile.Resul
 		err = instance.Delete(ctx)
 		if err != nil {
 			log.Error(err)
+		} else {
+			instance.SetFinalizers(nil)
 		}
-		instance.SetFinalizers(nil)
 		return reconcile.Result{}, r.client.Update(ctx, instance)
 	} else if instance.IsCreated() {
 		if instance.HasChanged() {
 			logger.Infof("update")
-			instance.Update(ctx)
+			err := instance.Update(ctx)
+			if err != nil {
+				logger.Error(err)
+			}
 		}
 	} else {
 		logger.Info("create ")

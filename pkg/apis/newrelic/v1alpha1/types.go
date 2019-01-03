@@ -24,7 +24,6 @@ type CRD interface {
 	Create(context.Context) error
 	Update(context.Context) error
 	Delete(context.Context) error
-	Signature() string
 	GetID() string
 	IsCreated() bool
 }

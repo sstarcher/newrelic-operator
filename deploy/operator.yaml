@@ -16,7 +16,7 @@ spec:
       containers:
         - name: newrelic-operator
           # Replace this with the built image name
-          image: sstarcher/newrelic-operator:test
+          image: sstarcher/newrelic-operator:latest
           ports:
           - containerPort: 60000
             name: metrics
@@ -25,7 +25,7 @@ spec:
           imagePullPolicy: Always
           env:
             - name: NEW_RELIC_APIKEY
-              value: REPLACE_ME_NEW_RELIC_APIKEY
+              value: bb778fa5a72e1b76dd5bcf669786b6cc
             - name: WATCH_NAMESPACE
               valueFrom:
                 fieldRef:

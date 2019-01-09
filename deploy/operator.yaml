@@ -12,7 +12,7 @@ spec:
       labels:
         name: newrelic-operator
     spec:
-      serviceAccountName: newrelic-operator
+      serviceAccountName: newrelic-operator-test
       containers:
         - name: newrelic-operator
           # Replace this with the built image name

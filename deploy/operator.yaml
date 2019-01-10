@@ -25,7 +25,7 @@ spec:
           imagePullPolicy: Always
           env:
             - name: NEW_RELIC_APIKEY
-              value: bb778fa5a72e1b76dd5bcf669786b6cc
+              value: REPLACE_ME_NEW_RELIC_APIKEY
             - name: WATCH_NAMESPACE
               valueFrom:
                 fieldRef:

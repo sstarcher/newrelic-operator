@@ -30,15 +30,16 @@ type Monitor struct {
 }
 
 type MonitorSpec struct {
-	Type         *string              `json:"type,omitempty"`
-	Frequency    *int64               `json:"frequency,omitempty"`
-	URI          *string              `json:"uri,omitempty"`
-	Locations    []*string            `json:"locations,omitempty"`
-	Status       *MonitorStatusString `json:"status,omitempty"`
-	SLAThreshold *float64             `json:"slaThreshold,omitempty"`
-	Options      MonitorOptions       `json:"options,omitempty"`
-	Script       *Script              `json:"script,omitempty"`
-	Conditions   []Conditions         `json:"conditions,omitempty"`
+	Type          *string              `json:"type,omitempty"`
+	Frequency     *int64               `json:"frequency,omitempty"`
+	URI           *string              `json:"uri,omitempty"`
+	Locations     []*string            `json:"locations,omitempty"`
+	Status        *MonitorStatusString `json:"status,omitempty"`
+	SLAThreshold  *float64             `json:"slaThreshold,omitempty"`
+	ManageUpdates *bool                `json:"manageUpdates,omitempty"`
+	Options       MonitorOptions       `json:"options,omitempty"`
+	Script        *Script              `json:"script,omitempty"`
+	Conditions    []Conditions         `json:"conditions,omitempty"`
 }
 
 type MonitorStatus struct {
@@ -98,6 +99,11 @@ func (s MonitorSpec) GetSum() []byte {
 // IsCreated specifies if the object has been created in new relic yet
 func (s *Monitor) IsCreated() bool {
 	return s.Status.IsCreated()
+}
+
+// Signature for the CRD
+func (s *Monitor) Signature() string {
+	return fmt.Sprintf("%s %s/%s", s.TypeMeta.Kind, s.Namespace, s.Name)
 }
 
 func (s *Monitor) HasChanged() bool {
@@ -215,21 +221,24 @@ func (s *Monitor) GetID() string {
 
 // Update object in newrelic
 func (s *Monitor) Update(ctx context.Context) error {
-	//TODO Updates are failing
-	// rsp, err := clientSythetics.SyntheticsMonitors.Update(ctx, s.toNewRelic(), s.Status.ID)
-	// err = handleError(rsp, err)
-	// if err != nil {
-	// 	s.Status.Info = err.Error()
-	// 	return err
-	// }
+	if s.Spec.ManageUpdates == nil || (s.Spec.ManageUpdates != nil && *(s.Spec.ManageUpdates)) {
+		rsp, err := clientSythetics.SyntheticsMonitors.Update(ctx, s.toNewRelic(), s.Status.ID)
+		err = handleError(rsp, err)
+		if err != nil {
+			s.Status.Info = err.Error()
+			return err
+		}
 
-	err := s.updateCondition(ctx)
-	if err != nil {
-		s.Status.Info = err.Error()
-		return err
+		err = s.updateCondition(ctx)
+		if err != nil {
+			s.Status.Info = err.Error()
+			return err
+		}
+
+		s.Status.Hash = s.Spec.GetSum()
+	} else {
+		log.Warn(fmt.Sprintf("Skipping update for %s", s.Signature()))
 	}
-
-	s.Status.Hash = s.Spec.GetSum()
 	return nil
 }
 

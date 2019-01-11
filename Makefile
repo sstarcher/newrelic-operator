@@ -11,6 +11,7 @@ dep:
 build: dep
 ifdef NEW_RELIC_APIKEY
 	git checkout deploy/operator.yaml
+	git checkout deploy/role_binding.yaml
 	@sed -i '' s/REPLACE_ME_NEW_RELIC_APIKEY/${NEW_RELIC_APIKEY}/ deploy/operator.yaml
 	@sed -i '' s/REPLACE_NAMESPACE/default/ deploy/role_binding.yaml
 else

@@ -101,11 +101,6 @@ func (s *Monitor) IsCreated() bool {
 	return s.Status.IsCreated()
 }
 
-// Signature for the CRD
-func (s *Monitor) Signature() string {
-	return fmt.Sprintf("%s %s/%s", s.TypeMeta.Kind, s.Namespace, s.Name)
-}
-
 func (s *Monitor) HasChanged() bool {
 	return hasChanged(&s.Spec, &s.Status)
 }
@@ -237,7 +232,7 @@ func (s *Monitor) Update(ctx context.Context) error {
 
 		s.Status.Hash = s.Spec.GetSum()
 	} else {
-		log.Warn(fmt.Sprintf("Skipping update for %s", s.Signature()))
+		GetLogger(ctx).Warn("Updates on monitor disabled")
 	}
 	return nil
 }

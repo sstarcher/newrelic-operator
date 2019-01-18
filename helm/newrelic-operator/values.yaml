@@ -46,6 +46,7 @@ tolerations: []
 affinity: {}
 
 customResources:
+  create: true
   alertChannels:
   #   example:
   #     configuration:

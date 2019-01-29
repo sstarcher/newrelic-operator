@@ -55,7 +55,8 @@ required = [
 
 [[constraint]]
   name = "github.com/IBM/newrelic-cli"
-  revision = "5db9303c73ca165f361105dd3bb09ba9bd2be8da"
+  revision = "76d8e6dd39f63c13ff7fc5c518b305149f7cc15b"
+  source = "https://github.com/sstarcher/newrelic-cli.git"
 
 [[constraint]]
   name = "github.com/cenkalti/backoff"

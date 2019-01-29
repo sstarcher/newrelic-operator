@@ -13,35 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package cmd
+package take
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
-var version = "v0.1.8"
-
-// versionCmd represents the version command
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Print out current version number",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(version)
-	},
+var TakeCmd = &cobra.Command{
+	Use:   "take",
+	Short: "Take template.",
 }
 
 func init() {
-	rootCmd.AddCommand(versionCmd)
-
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// versionCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// TakeCmd.PersistentFlags().String("foo", "", "A help for foo")
+	TakeCmd.PersistentFlags().StringP("where", "w", "console", "Output where. console/file are supported")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// versionCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// TakeCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

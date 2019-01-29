@@ -10,14 +10,15 @@
   version = "v0.32.0"
 
 [[projects]]
-  digest = "1:34fa3946567fdc7f42d40f015ed98476f24079ca1795cb60103224d05c63b042"
+  digest = "1:6de30fb9719fa700284ca937f47aabcd0377c7519e0e5a74110ed1e321c68204"
   name = "github.com/IBM/newrelic-cli"
   packages = [
     "newrelic",
     "utils",
   ]
   pruneopts = "NT"
-  revision = "5db9303c73ca165f361105dd3bb09ba9bd2be8da"
+  revision = "76d8e6dd39f63c13ff7fc5c518b305149f7cc15b"
+  source = "https://github.com/sstarcher/newrelic-cli.git"
 
 [[projects]]
   digest = "1:d8ebbd207f3d3266d4423ce4860c9f3794956306ded6c7ba312ecc69cdfbf04c"
@@ -297,7 +298,6 @@
   digest = "1:ee01ef8a6bac37c704936dfd61a59421a1a5e26b3f9f2c669c5eeb41dde9c5ca"
   name = "github.com/operator-framework/operator-sdk"
   packages = [
-    "pkg/k8sutil",
     "pkg/test",
     "pkg/test/e2eutil",
     "version",
@@ -800,7 +800,6 @@
     "github.com/IBM/newrelic-cli/newrelic",
     "github.com/IBM/newrelic-cli/utils",
     "github.com/cenkalti/backoff",
-    "github.com/operator-framework/operator-sdk/pkg/k8sutil",
     "github.com/operator-framework/operator-sdk/pkg/test",
     "github.com/operator-framework/operator-sdk/pkg/test/e2eutil",
     "github.com/operator-framework/operator-sdk/version",

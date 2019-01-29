@@ -88,7 +88,7 @@ func (r *ReconcileAlertPolicy) Reconcile(request reconcile.Request) (reconcile.R
 		logger.Infof("delete")
 		err = instance.Delete(ctx)
 		if err != nil {
-			log.Error(err)
+			logger.Error(err)
 		}
 		instance.SetFinalizers(nil)
 		return reconcile.Result{}, r.client.Update(ctx, instance)
@@ -97,7 +97,7 @@ func (r *ReconcileAlertPolicy) Reconcile(request reconcile.Request) (reconcile.R
 			logger.Infof("update")
 			err = instance.Update(ctx)
 			if err != nil {
-				log.Error(err)
+				logger.Error(err)
 			}
 			return reconcile.Result{}, r.client.Update(ctx, instance)
 		}
@@ -105,7 +105,7 @@ func (r *ReconcileAlertPolicy) Reconcile(request reconcile.Request) (reconcile.R
 		logger.Info("create")
 		err = instance.Create(ctx)
 		if err != nil {
-			log.Error(err)
+			logger.Error(err)
 		}
 
 		return reconcile.Result{}, r.client.Update(ctx, instance)

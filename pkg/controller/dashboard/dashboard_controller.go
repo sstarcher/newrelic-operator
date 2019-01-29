@@ -88,7 +88,7 @@ func (r *ReconcileDashboard) Reconcile(request reconcile.Request) (reconcile.Res
 		logger.Infof("delete")
 		err = instance.Delete(ctx)
 		if err != nil {
-			log.Error(err)
+			logger.Error(err)
 		}
 		instance.SetFinalizers(nil)
 		return reconcile.Result{}, r.client.Update(ctx, instance)

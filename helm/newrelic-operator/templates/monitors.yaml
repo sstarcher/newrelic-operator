@@ -1,9 +1,9 @@
-{{- if .Values.customResources.alertPolicies }}
+{{- if .Values.customResources.monitors }}
 {{- $top := . -}}
-{{- range $name, $item := .Values.customResources.alertPolicies }}
+{{- range $name, $item := .Values.customResources.monitors }}
 ---
 apiVersion: "newrelic.shanestarcher.com/v1alpha1"
-kind: "AlertPolicy"
+kind: "Monitor"
 metadata:
   name: {{ $name }}
   labels:

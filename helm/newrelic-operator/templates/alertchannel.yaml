@@ -5,7 +5,7 @@
 apiVersion: "newrelic.shanestarcher.com/v1alpha1"
 kind: "AlertChannel"
 metadata:
-  name: {{ template "newrelic-operator.fullname" $top }}-{{ $name }}
+  name: {{ $name }}
   labels:
 {{ include "labels" $top | indent 4 }}
 spec:

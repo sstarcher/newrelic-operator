@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/IBM/newrelic-cli/newrelic"
@@ -56,8 +57,26 @@ func (s *AlertChannel) HasChanged() bool {
 	return false
 }
 
+func (s *AlertChannel) validate() error {
+	slackType := newrelic.AlertsChannelType(s.Spec.Type)
+	switch slackType {
+	case newrelic.ChannelBySlack:
+		if _, ok := s.Spec.Configuration["channel"]; !ok {
+			return errors.New("slack notifications require channel configuration")
+		}
+		if _, ok := s.Spec.Configuration["url"]; !ok {
+			return errors.New("slack notifications require url configuration")
+		}
+	}
+	return nil
+}
+
 // Create in newrelic
 func (s *AlertChannel) Create(ctx context.Context) error {
+	if err := s.validate(); err != nil {
+		return err
+	}
+
 	data := &newrelic.AlertsChannelEntity{
 		AlertsChannel: &newrelic.AlertsChannel{
 			Name:          &s.ObjectMeta.Name,

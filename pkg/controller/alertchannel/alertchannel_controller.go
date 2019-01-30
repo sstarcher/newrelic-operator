@@ -2,6 +2,7 @@ package alertchannel
 
 import (
 	"context"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -15,6 +16,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+var defaultRequeue = reconcile.Result{
+	Requeue:      true,
+	RequeueAfter: time.Minute * 5,
+}
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -66,6 +72,7 @@ type ReconcileAlertChannel struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileAlertChannel) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	reconcileResult := reconcile.Result{}
 	// Fetch the AlertChannel instance
 	instance := &newrelicv1alpha1.AlertChannel{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -74,10 +81,10 @@ func (r *ReconcileAlertChannel) Reconcile(request reconcile.Request) (reconcile.
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			return reconcile.Result{}, nil
+			return reconcileResult, nil
 		}
 		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
+		return reconcileResult, err
 	}
 
 	logger := log.WithFields(log.Fields{"type": "alertchannel", "name": request.Name, "namespace": request.Namespace})
@@ -88,21 +95,27 @@ func (r *ReconcileAlertChannel) Reconcile(request reconcile.Request) (reconcile.
 		err = instance.Delete(ctx)
 		if err != nil {
 			logger.Error(err)
+			reconcileResult = defaultRequeue
 		}
 		instance.SetFinalizers(nil)
 		return reconcile.Result{}, r.client.Update(ctx, instance)
 	} else if instance.IsCreated() {
 		if instance.HasChanged() {
 			logger.Infof("update %s", instance.GetID())
-			instance.Update(ctx)
+			err = instance.Update(ctx)
+			if err != nil {
+				logger.Error(err)
+				reconcileResult = defaultRequeue
+			}
 		}
 	} else {
 		logger.Info("create")
 		err := instance.Create(ctx)
 		if err != nil {
 			logger.Error(err)
+			reconcileResult = defaultRequeue
 		}
 	}
 
-	return reconcile.Result{}, r.client.Update(ctx, instance)
+	return reconcileResult, r.client.Update(ctx, instance)
 }

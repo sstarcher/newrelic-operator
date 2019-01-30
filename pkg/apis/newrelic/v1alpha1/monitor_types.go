@@ -256,7 +256,7 @@ func (s *Monitor) updateCondition(ctx context.Context) error {
 			if len(oldPolicies) > index {
 				data, rsp, err = client.AlertsConditions.Update(ctx, newrelic.ConditionSynthetics, cond, oldPolicies[index])
 			} else {
-				policyID, err := s.findPolicyId(ctx, item.PolicyName)
+				policyID, err := s.findPolicyID(ctx, item.PolicyName)
 				if err != nil {
 					s.Status.Info = err.Error()
 					return err
@@ -311,7 +311,7 @@ func (s *Monitor) updateCondition(ctx context.Context) error {
 // 	return nil
 // }
 
-func (s *Monitor) findPolicyId(ctx context.Context, name string) (*int64, error) {
+func (s *Monitor) findPolicyID(ctx context.Context, name string) (*int64, error) {
 	policies, rsp, err := client.AlertsPolicies.ListAll(ctx, &newrelic.AlertsPolicyListOptions{
 		NameOptions: name,
 	})
@@ -321,10 +321,16 @@ func (s *Monitor) findPolicyId(ctx context.Context, name string) (*int64, error)
 		return nil, err
 	}
 
-	if len(policies.AlertsPolicies) != 1 {
-		err = fmt.Errorf("expected a policy search by name to only return 1 result, but recieved %d for %s", len(policies.AlertsPolicies), name)
-		s.Status.Info = err.Error()
-		return nil, err
+	var id *int64
+	for _, item := range policies.AlertsPolicies {
+		if *item.Name == name {
+			if id != nil {
+				err = fmt.Errorf("expected a policy search by name to only return 1 result, but found multiple for %s", name)
+				s.Status.Info = err.Error()
+				return nil, err
+			}
+			id = item.ID
+		}
 	}
 
 	return policies.AlertsPolicies[0].ID, nil

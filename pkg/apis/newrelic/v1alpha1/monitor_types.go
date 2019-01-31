@@ -30,15 +30,16 @@ type Monitor struct {
 }
 
 type MonitorSpec struct {
-	Type         *string              `json:"type,omitempty"`
-	Frequency    *int64               `json:"frequency,omitempty"`
-	URI          *string              `json:"uri,omitempty"`
-	Locations    []*string            `json:"locations,omitempty"`
-	Status       *MonitorStatusString `json:"status,omitempty"`
-	SLAThreshold *float64             `json:"slaThreshold,omitempty"`
-	Options      MonitorOptions       `json:"options,omitempty"`
-	Script       *Script              `json:"script,omitempty"`
-	Conditions   []Conditions         `json:"conditions,omitempty"`
+	Type          *string              `json:"type,omitempty"`
+	Frequency     *int64               `json:"frequency,omitempty"`
+	URI           *string              `json:"uri,omitempty"`
+	Locations     []*string            `json:"locations,omitempty"`
+	Status        *MonitorStatusString `json:"status,omitempty"`
+	SLAThreshold  *float64             `json:"slaThreshold,omitempty"`
+	ManageUpdates *bool                `json:"manageUpdates,omitempty"`
+	Options       MonitorOptions       `json:"options,omitempty"`
+	Script        *Script              `json:"script,omitempty"`
+	Conditions    []Conditions         `json:"conditions,omitempty"`
 }
 
 type MonitorStatus struct {
@@ -215,21 +216,24 @@ func (s *Monitor) GetID() string {
 
 // Update object in newrelic
 func (s *Monitor) Update(ctx context.Context) error {
-	//TODO Updates are failing
-	// rsp, err := clientSythetics.SyntheticsMonitors.Update(ctx, s.toNewRelic(), s.Status.ID)
-	// err = handleError(rsp, err)
-	// if err != nil {
-	// 	s.Status.Info = err.Error()
-	// 	return err
-	// }
+	if s.Spec.ManageUpdates == nil || (s.Spec.ManageUpdates != nil && *(s.Spec.ManageUpdates)) {
+		rsp, err := clientSythetics.SyntheticsMonitors.Update(ctx, s.toNewRelic(), s.Status.ID)
+		err = handleError(rsp, err)
+		if err != nil {
+			s.Status.Info = err.Error()
+			return err
+		}
 
-	err := s.updateCondition(ctx)
-	if err != nil {
-		s.Status.Info = err.Error()
-		return err
+		err = s.updateCondition(ctx)
+		if err != nil {
+			s.Status.Info = err.Error()
+			return err
+		}
+
+		s.Status.Hash = s.Spec.GetSum()
+	} else {
+		GetLogger(ctx).Warn("Updates on monitor disabled")
 	}
-
-	s.Status.Hash = s.Spec.GetSum()
 	return nil
 }
 

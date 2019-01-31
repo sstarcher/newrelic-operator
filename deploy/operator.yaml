@@ -12,11 +12,11 @@ spec:
       labels:
         name: newrelic-operator
     spec:
-      serviceAccountName: newrelic-operator
+      serviceAccountName: newrelic-operator-test
       containers:
         - name: newrelic-operator
           # Replace this with the built image name
-          image: sstarcher/newrelic-operator:test
+          image: sstarcher/newrelic-operator:latest
           ports:
           - containerPort: 60000
             name: metrics

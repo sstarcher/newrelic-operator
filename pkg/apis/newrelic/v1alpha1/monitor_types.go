@@ -337,7 +337,7 @@ func (s *Monitor) findPolicyID(ctx context.Context, name string) (*int64, error)
 		}
 	}
 
-	return policies.AlertsPolicies[0].ID, nil
+	return id, nil
 }
 
 func init() {

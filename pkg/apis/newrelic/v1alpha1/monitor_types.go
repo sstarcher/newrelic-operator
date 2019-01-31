@@ -216,34 +216,46 @@ func (s *Monitor) GetID() string {
 
 // Update object in newrelic
 func (s *Monitor) Update(ctx context.Context) error {
-	if s.Spec.ManageUpdates == nil || (s.Spec.ManageUpdates != nil && *(s.Spec.ManageUpdates)) {
-		rsp, err := clientSythetics.SyntheticsMonitors.Update(ctx, s.toNewRelic(), s.Status.ID)
-		err = handleError(rsp, err)
+	s.Status.Info = "Updated"
+	monitor := s.toNewRelic()
+	if s.Spec.ManageUpdates != nil && *s.Spec.ManageUpdates {
+		data, err := s.getCurrent(ctx)
 		if err != nil {
-			s.Status.Info = err.Error()
 			return err
 		}
-
-		err = s.updateCondition(ctx)
-		if err != nil {
-			s.Status.Info = err.Error()
-			return err
-		}
-
-		s.Status.Hash = s.Spec.GetSum()
-	} else {
-		GetLogger(ctx).Warn("Updates on monitor disabled")
+		monitor.Status = data.Status
 	}
+
+	rsp, err := clientSythetics.SyntheticsMonitors.Update(ctx, monitor, s.Status.ID)
+	err = handleError(rsp, err)
+	if err != nil {
+		s.Status.Info = err.Error()
+		return err
+	}
+
+	err = s.updateCondition(ctx)
+	if err != nil {
+		s.Status.Info = err.Error()
+		return err
+	}
+
+	s.Status.Hash = s.Spec.GetSum()
+
 	return nil
 }
 
 func (s *Monitor) updateCondition(ctx context.Context) error {
 	if s.Spec.Conditions != nil {
-		oldPolicies := s.Status.Policies
+		for _, item := range s.Status.Policies {
+			rsp, err := client.AlertsConditions.DeleteByID(ctx, newrelic.ConditionSynthetics, item)
+			err = handleErrorMessage("delete error %v", rsp, err)
+			if err != nil {
+				return err
+			}
+		}
 
 		s.Status.Policies = []int64{}
-		for index, item := range s.Spec.Conditions {
-
+		for _, item := range s.Spec.Conditions {
 			cond := &newrelic.AlertsConditionEntity{
 				AlertsSyntheticsConditionEntity: &newrelic.AlertsSyntheticsConditionEntity{
 					AlertsSyntheticsCondition: &newrelic.AlertsSyntheticsCondition{
@@ -254,39 +266,18 @@ func (s *Monitor) updateCondition(ctx context.Context) error {
 				},
 			}
 
-			var data *newrelic.AlertsConditionEntity
-			var rsp *newrelic.Response
-			var err error
-			if len(oldPolicies) > index {
-				data, rsp, err = client.AlertsConditions.Update(ctx, newrelic.ConditionSynthetics, cond, oldPolicies[index])
-			} else {
-				policyID, err := s.findPolicyID(ctx, item.PolicyName)
-				if err != nil {
-					s.Status.Info = err.Error()
-					return err
-				}
-				data, rsp, err = client.AlertsConditions.Create(ctx, newrelic.ConditionSynthetics, cond, *policyID)
-			}
-
-			if data != nil {
-				conditionID := *data.AlertsSyntheticsConditionEntity.AlertsSyntheticsCondition.ID
-				s.Status.Policies = append(s.Status.Policies, conditionID)
-			}
-			err = handleError(rsp, err)
+			policyID, err := s.findPolicyID(ctx, item.PolicyName)
 			if err != nil {
 				s.Status.Info = err.Error()
 				return err
 			}
 
-		}
-
-		if len(oldPolicies) > len(s.Status.Policies) {
-			for _, item := range oldPolicies[len(s.Status.Policies):len(oldPolicies)] {
-				rsp, err := client.AlertsConditions.DeleteByID(ctx, newrelic.ConditionSynthetics, item)
-				err = handleErrorMessage("delete error %v", rsp, err)
-				if err != nil {
-					return err
-				}
+			data, rsp, err := client.AlertsConditions.Create(ctx, newrelic.ConditionSynthetics, cond, *policyID)
+			err = handleError(rsp, err)
+			if err != nil {
+				log.Error(err)
+			} else {
+				s.Status.Policies = append(s.Status.Policies, *data.AlertsSyntheticsConditionEntity.AlertsSyntheticsCondition.ID)
 			}
 		}
 	}
@@ -314,6 +305,16 @@ func (s *Monitor) updateCondition(ctx context.Context) error {
 
 // 	return nil
 // }
+
+func (s *Monitor) getCurrent(ctx context.Context) (*newrelic.Monitor, error) {
+	data, rsp, err := clientSythetics.SyntheticsMonitors.GetByID(ctx, s.GetID())
+	err = handleError(rsp, err)
+	if err != nil {
+		s.Status.Info = err.Error()
+		return nil, err
+	}
+	return data, nil
+}
 
 func (s *Monitor) findPolicyID(ctx context.Context, name string) (*int64, error) {
 	policies, rsp, err := client.AlertsPolicies.ListAll(ctx, &newrelic.AlertsPolicyListOptions{

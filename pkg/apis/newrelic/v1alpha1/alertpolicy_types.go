@@ -54,8 +54,6 @@ func (s *AlertPolicy) HasChanged() bool {
 
 // Create in newrelic
 func (s *AlertPolicy) Create(ctx context.Context) error {
-	log := GetLogger(ctx)
-
 	data := &newrelic.AlertsPolicyEntity{
 		AlertsPolicy: &newrelic.AlertsPolicy{
 			Name:               &s.ObjectMeta.Name,
@@ -73,37 +71,7 @@ func (s *AlertPolicy) Create(ctx context.Context) error {
 	createdInt(*data.AlertsPolicy.ID, &s.Status, &s.Spec)
 	s.SetFinalizers([]string{finalizer})
 
-	if s.Spec.Channels != nil {
-		channels, rsp, err := client.AlertsChannels.ListAll(ctx, nil)
-		err = handleError(rsp, err)
-		if err != nil { // TODO do we need error handling to delete the AlertPolicy that was created above
-			s.Status.Info = err.Error()
-			return err
-		}
-
-		channelIds := []*int64{}
-		for _, channel := range s.Spec.Channels {
-			found := false
-			for _, alertChannel := range channels.AlertsChannels {
-				if channel == *alertChannel.Name {
-					channelIds = append(channelIds, alertChannel.ID)
-					found = true
-					break
-				}
-			}
-			if !found {
-				log.Warnf("unable to find the %s channel", channel)
-			}
-		}
-
-		rsp, err = client.AlertsChannels.UpdatePolicyChannels(ctx, *s.Status.GetID(), channelIds)
-		err = handleError(rsp, err)
-		if err != nil {
-			s.Status.Info = err.Error()
-			return err
-		}
-	}
-	return nil
+	return s.addChannels(ctx)
 }
 
 // Delete in newrelic
@@ -152,7 +120,49 @@ func (s *AlertPolicy) Update(ctx context.Context) error {
 		return err
 	}
 
+	err = s.addChannels(ctx)
+	if err != nil {
+		s.Status.Info = err.Error()
+		return err
+	}
+
 	update(&s.Spec, &s.Status)
+	return nil
+}
+
+func (s *AlertPolicy) addChannels(ctx context.Context) error {
+	log := GetLogger(ctx)
+
+	if s.Spec.Channels != nil {
+		channels, rsp, err := client.AlertsChannels.ListAll(ctx, nil)
+		err = handleError(rsp, err)
+		if err != nil {
+			s.Status.Info = err.Error()
+			return err
+		}
+
+		channelIds := []*int64{}
+		for _, channel := range s.Spec.Channels {
+			found := false
+			for _, alertChannel := range channels.AlertsChannels {
+				if channel == *alertChannel.Name {
+					channelIds = append(channelIds, alertChannel.ID)
+					found = true
+					break
+				}
+			}
+			if !found {
+				log.Warnf("unable to find the %s channel", channel)
+			}
+		}
+
+		rsp, err = client.AlertsChannels.UpdatePolicyChannels(ctx, *s.Status.GetID(), channelIds)
+		err = handleError(rsp, err)
+		if err != nil {
+			s.Status.Info = err.Error()
+			return err
+		}
+	}
 	return nil
 }
 

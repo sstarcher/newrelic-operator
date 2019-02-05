@@ -256,12 +256,15 @@ func (s *Monitor) updateCondition(ctx context.Context) error {
 
 		s.Status.Policies = []int64{}
 		for _, item := range s.Spec.Conditions {
+			var failureName = "Check Failure"
+			var enabled = true
 			cond := &newrelic.AlertsConditionEntity{
 				AlertsSyntheticsConditionEntity: &newrelic.AlertsSyntheticsConditionEntity{
 					AlertsSyntheticsCondition: &newrelic.AlertsSyntheticsCondition{
-						Name:       &s.Name,
+						Name:       &failureName,
 						MonitorID:  s.Status.ID,
 						RunbookURL: item.RunbookURL,
+						Enabled:    &enabled,
 					},
 				},
 			}

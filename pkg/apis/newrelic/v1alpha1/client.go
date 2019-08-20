@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"os"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/IBM/newrelic-cli/newrelic"
 	"github.com/IBM/newrelic-cli/utils"
 )
@@ -57,13 +55,14 @@ func handleError(rsp *newrelic.Response, err error) error {
 	if err != nil {
 		return fmt.Errorf("newrelic api error %v", err)
 	} else if rsp.StatusCode < 200 || rsp.StatusCode >= 300 {
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(rsp.Body)
-		if rsp.StatusCode == 404 {
-			log.Warn(buf.String())
-			return nil // Don't treat 404s as errors
-		}
-		return fmt.Errorf("%s", buf.String())
+		body := responseBodyToString(rsp)
+		return fmt.Errorf("%s", body)
 	}
 	return nil
+}
+
+func responseBodyToString(rsp *newrelic.Response) string {
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(rsp.Body)
+	return buf.String()
 }

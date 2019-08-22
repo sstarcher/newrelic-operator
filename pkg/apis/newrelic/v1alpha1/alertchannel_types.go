@@ -104,6 +104,10 @@ func (s *AlertChannel) Delete(ctx context.Context) error {
 		return fmt.Errorf("alert channel object has not been created %s", s.ObjectMeta.Name)
 	}
 	rsp, err := client.AlertsChannels.DeleteByID(ctx, *id)
+	if rsp.StatusCode == 404 {
+		log.Warn(responseBodyToString(rsp))
+		return nil
+	}
 	err = handleError(rsp, err)
 	if err != nil {
 		return err

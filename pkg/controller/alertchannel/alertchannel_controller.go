@@ -96,8 +96,9 @@ func (r *ReconcileAlertChannel) Reconcile(request reconcile.Request) (reconcile.
 		if err != nil {
 			logger.Error(err)
 			reconcileResult = defaultRequeue
+		} else {
+			instance.SetFinalizers(nil)
 		}
-		instance.SetFinalizers(nil)
 		return reconcile.Result{}, r.client.Update(ctx, instance)
 	} else if instance.IsCreated() {
 		if instance.HasChanged() {

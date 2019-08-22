@@ -82,6 +82,10 @@ func (s *AlertPolicy) Delete(ctx context.Context) error {
 	}
 
 	rsp, err := client.AlertsPolicies.DeleteByID(ctx, *id)
+	if rsp.StatusCode == 404 {
+		log.Warn(responseBodyToString(rsp))
+		return nil
+	}
 	err = handleError(rsp, err)
 	if err != nil {
 		return err

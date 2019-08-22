@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/IBM/newrelic-cli/newrelic"
+	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -66,6 +67,10 @@ func (s *Dashboard) Delete(ctx context.Context) error {
 	}
 
 	rsp, _, err := client.Dashboards.DeleteByID(ctx, *id)
+	if rsp.StatusCode == 404 {
+		log.Warn(responseBodyToString(rsp))
+		return nil
+	}
 	err = handleError(rsp, err)
 	if err != nil {
 		return err

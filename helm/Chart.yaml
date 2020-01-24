@@ -1,0 +1,6 @@
+apiVersion: v2
+name: newrelic-operator
+description: K8S Operator for New Relic Services
+type: application
+version: 0.1.0
+appVersion: latest

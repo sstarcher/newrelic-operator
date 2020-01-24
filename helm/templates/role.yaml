@@ -1,10 +1,9 @@
-{{- if .Values.rbac.create }}
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
   labels:
-{{ include "labels" . | indent 4 }}
-  name: {{ template "newrelic-operator.fullname" . }}
+    {{- include "newrelic-operator.labels" . | nindent 4 }}
+  name: {{ include "newrelic-operator.fullname" . }}
 rules:
 - apiGroups:
   - monitoring.coreos.com
@@ -29,4 +28,3 @@ rules:
   - customresourcedefinitions
   verbs:
   - '*'
-{{- end }}

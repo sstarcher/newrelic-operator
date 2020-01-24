@@ -7,7 +7,7 @@ kind: "AlertChannel"
 metadata:
   name: {{ $name }}
   labels:
-{{ include "labels" $top | indent 4 }}
+    {{- include "newrelic-operator.labels" $top | nindent 4 }}
 spec:
 {{ $item | toYaml | indent 2 }}
 {{- end}}

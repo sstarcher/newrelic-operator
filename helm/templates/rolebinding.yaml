@@ -1,0 +1,14 @@
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  labels:
+    {{- include "newrelic-operator.labels" . | nindent 4 }}
+  name: {{ include "newrelic-operator.fullname" . }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "newrelic-operator.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: {{ include "newrelic-operator.fullname" . }}
+  apiGroup: rbac.authorization.k8s.io

@@ -182,16 +182,25 @@ func (s *Monitor) Create(ctx context.Context) error {
 
 // Delete in newrelic
 func (s *Monitor) Delete(ctx context.Context) error {
+	logger := GetLogger(ctx)
+
 	id := s.Status.ID
 	if id == nil {
 		return fmt.Errorf("alert Policy object has not been created %s", s.ObjectMeta.Name)
 	}
 
+	fmt.Println("orly")
 	if s.Status.Policies != nil {
 		for _, item := range s.Status.Policies {
 			rsp, err := client.AlertsConditions.DeleteByID(ctx, newrelic.ConditionSynthetics, item)
+			if rsp.StatusCode == 404 {
+				logger.Warn("Unable to find policy %v skipping deletion and moving on", item)
+				continue
+			}
+
 			err = handleError(rsp, err)
 			if err != nil {
+				fmt.Println("policy")
 				return err
 			}
 		}
@@ -199,7 +208,7 @@ func (s *Monitor) Delete(ctx context.Context) error {
 
 	rsp, err := clientSythetics.SyntheticsMonitors.DeleteByID(ctx, id)
 	if rsp.StatusCode == 404 {
-		log.Warn(responseBodyToString(rsp))
+		logger.Warn("Unable to find monitor %v skipping deletion and moving on", id)
 		return nil
 	}
 	err = handleError(rsp, err)
@@ -220,8 +229,11 @@ func (s *Monitor) GetID() string {
 
 // Update object in newrelic
 func (s *Monitor) Update(ctx context.Context) error {
+	logger := GetLogger(ctx)
+
 	s.Status.Info = "Updated"
 	monitor := s.toNewRelic()
+
 	if s.Spec.ManageUpdates != nil && *s.Spec.ManageUpdates {
 		data, err := s.getCurrent(ctx)
 		if err != nil {
@@ -231,6 +243,12 @@ func (s *Monitor) Update(ctx context.Context) error {
 	}
 
 	rsp, err := clientSythetics.SyntheticsMonitors.Update(ctx, monitor, s.Status.ID)
+	if rsp.StatusCode == 404 {
+		s.Status.ID = nil
+		logger.Warnf("id is missing recreating %", s.ObjectMeta.Name)
+		return nil
+	}
+
 	err = handleError(rsp, err)
 	if err != nil {
 		s.Status.Info = err.Error()
@@ -249,6 +267,8 @@ func (s *Monitor) Update(ctx context.Context) error {
 }
 
 func (s *Monitor) updateCondition(ctx context.Context) error {
+	logger := GetLogger(ctx)
+
 	if s.Spec.Conditions != nil {
 		for _, item := range s.Status.Policies {
 			rsp, err := client.AlertsConditions.DeleteByID(ctx, newrelic.ConditionSynthetics, item)
@@ -282,7 +302,7 @@ func (s *Monitor) updateCondition(ctx context.Context) error {
 			data, rsp, err := client.AlertsConditions.Create(ctx, newrelic.ConditionSynthetics, cond, *policyID)
 			err = handleError(rsp, err)
 			if err != nil {
-				log.Error(err)
+				logger.Error(err)
 			} else {
 				s.Status.Policies = append(s.Status.Policies, *data.AlertsSyntheticsConditionEntity.AlertsSyntheticsCondition.ID)
 			}

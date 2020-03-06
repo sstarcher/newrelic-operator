@@ -118,5 +118,6 @@ func (r *ReconcileAlertPolicy) Reconcile(request reconcile.Request) (reconcile.R
 			reconcileResult = defaultRequeue
 		}
 	}
+
 	return reconcileResult, r.client.Update(ctx, instance)
 }

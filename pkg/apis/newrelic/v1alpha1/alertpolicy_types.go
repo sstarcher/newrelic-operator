@@ -76,6 +76,8 @@ func (s *AlertPolicy) Create(ctx context.Context) error {
 
 // Delete in newrelic
 func (s *AlertPolicy) Delete(ctx context.Context) error {
+	logger := GetLogger(ctx)
+
 	id := s.Status.GetID()
 	if id == nil {
 		return fmt.Errorf("alert Policy object has not been created %s", s.ObjectMeta.Name)
@@ -83,7 +85,7 @@ func (s *AlertPolicy) Delete(ctx context.Context) error {
 
 	rsp, err := client.AlertsPolicies.DeleteByID(ctx, *id)
 	if rsp.StatusCode == 404 {
-		log.Warn(responseBodyToString(rsp))
+		logger.Warn(responseBodyToString(rsp))
 		return nil
 	}
 	err = handleError(rsp, err)
@@ -104,6 +106,7 @@ func (s *AlertPolicy) GetID() string {
 
 // Update object in newrelic
 func (s *AlertPolicy) Update(ctx context.Context) error {
+	logger := GetLogger(ctx)
 	// TODO update is creating extra objects
 	data := &newrelic.AlertsPolicyEntity{
 		AlertsPolicy: &newrelic.AlertsPolicy{
@@ -118,6 +121,12 @@ func (s *AlertPolicy) Update(ctx context.Context) error {
 	}
 
 	data, rsp, err := client.AlertsPolicies.Update(ctx, data, *id)
+	if rsp.StatusCode == 404 {
+		s.Status.ID = nil
+		logger.Warnf("id is missing recreating %s", s.ObjectMeta.Name)
+		return nil
+	}
+
 	err = handleError(rsp, err)
 	if err != nil {
 		s.Status.Info = err.Error()
@@ -135,7 +144,7 @@ func (s *AlertPolicy) Update(ctx context.Context) error {
 }
 
 func (s *AlertPolicy) addChannels(ctx context.Context) error {
-	log := GetLogger(ctx)
+	logger := GetLogger(ctx)
 
 	if s.Spec.Channels != nil {
 		channels, rsp, err := client.AlertsChannels.ListAll(ctx, nil)
@@ -156,7 +165,7 @@ func (s *AlertPolicy) addChannels(ctx context.Context) error {
 				}
 			}
 			if !found {
-				log.Warnf("unable to find the %s channel", channel)
+				logger.Warnf("unable to find channel %s", channel)
 			}
 		}
 

@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -56,7 +57,11 @@ func handleError(rsp *newrelic.Response, err error) error {
 		return fmt.Errorf("newrelic api error %v", err)
 	} else if rsp.StatusCode < 200 || rsp.StatusCode >= 300 {
 		body := responseBodyToString(rsp)
-		return fmt.Errorf("%s", body)
+		if body != "" {
+			return errors.New(body)
+		}
+		return errors.New(rsp.String())
+
 	}
 	return nil
 }

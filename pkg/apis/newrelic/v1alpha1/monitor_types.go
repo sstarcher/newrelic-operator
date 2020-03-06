@@ -189,7 +189,6 @@ func (s *Monitor) Delete(ctx context.Context) error {
 		return fmt.Errorf("alert Policy object has not been created %s", s.ObjectMeta.Name)
 	}
 
-	fmt.Println("orly")
 	if s.Status.Policies != nil {
 		for _, item := range s.Status.Policies {
 			rsp, err := client.AlertsConditions.DeleteByID(ctx, newrelic.ConditionSynthetics, item)

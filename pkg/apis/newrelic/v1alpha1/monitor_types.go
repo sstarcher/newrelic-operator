@@ -199,7 +199,6 @@ func (s *Monitor) Delete(ctx context.Context) error {
 
 			err = handleError(rsp, err)
 			if err != nil {
-				fmt.Println("policy")
 				return err
 			}
 		}

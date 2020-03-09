@@ -193,7 +193,7 @@ func (s *Monitor) Delete(ctx context.Context) error {
 		for _, item := range s.Status.Policies {
 			rsp, err := client.AlertsConditions.DeleteByID(ctx, newrelic.ConditionSynthetics, item)
 			if rsp.StatusCode == 404 {
-				logger.Warn("Unable to find policy %v skipping deletion and moving on", item)
+				logger.Warnf("unable to find policy %v skipping deletion and moving on", item)
 				continue
 			}
 
@@ -206,7 +206,7 @@ func (s *Monitor) Delete(ctx context.Context) error {
 
 	rsp, err := clientSythetics.SyntheticsMonitors.DeleteByID(ctx, id)
 	if rsp.StatusCode == 404 {
-		logger.Warn("Unable to find monitor %v skipping deletion and moving on", id)
+		logger.Warnf("unable to find %v skipping deletion and moving on", id)
 		return nil
 	}
 	err = handleError(rsp, err)

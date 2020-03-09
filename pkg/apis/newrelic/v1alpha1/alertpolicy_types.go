@@ -85,7 +85,7 @@ func (s *AlertPolicy) Delete(ctx context.Context) error {
 
 	rsp, err := client.AlertsPolicies.DeleteByID(ctx, *id)
 	if rsp.StatusCode == 404 {
-		logger.Warn(responseBodyToString(rsp))
+		logger.Warnf("unable to find %v skipping deletion and moving on", id)
 		return nil
 	}
 	err = handleError(rsp, err)
@@ -165,7 +165,7 @@ func (s *AlertPolicy) addChannels(ctx context.Context) error {
 				}
 			}
 			if !found {
-				logger.Warnf("unable to find channel %s", channel)
+				logger.Warnf("unable to find %s", channel)
 			}
 		}
 

@@ -28,3 +28,17 @@ rules:
   - customresourcedefinitions
   verbs:
   - '*'
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - configmaps
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - create

@@ -30,8 +30,10 @@ spec:
           env:
           - name: OPERATOR_NAME
             value: {{ .Chart.Name }}
-          - name: LOG_JSON
-            value: "true"
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
           - name: WATCH_NAMESPACE
             valueFrom:
               fieldRef:

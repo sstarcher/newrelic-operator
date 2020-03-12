@@ -32,26 +32,6 @@ Create chart name and version as used by the chart label.
 {{- end -}}
 
 {{/*
-Common labels
-*/}}
-{{- define "newrelic-operator.labels" -}}
-helm.sh/chart: {{ include "newrelic-operator.chart" . }}
-{{ include "newrelic-operator.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-{{- end }}
-app.kubernetes.io/managed-by: {{ .Release.Service }}
-{{- end -}}
-
-{{/*
-Selector labels
-*/}}
-{{- define "newrelic-operator.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "newrelic-operator.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
-{{- end -}}
-
-{{/*
 Create the name of the service account to use
 */}}
 {{- define "newrelic-operator.serviceAccountName" -}}

@@ -1,0 +1,14 @@
+{{- if .Values.customResources.monitors }}
+{{- $top := . -}}
+{{- range $name, $item := .Values.customResources.monitors }}
+---
+apiVersion: "newrelic.shanestarcher.com/v1alpha1"
+kind: "Monitor"
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "newrelic-operator.labels" $top | nindent 4 }}
+spec:
+{{ $item | toYaml | indent 2 }}
+{{- end}}
+{{- end}}

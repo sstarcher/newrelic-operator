@@ -26,6 +26,8 @@ type CRD interface {
 	Delete(context.Context) error
 	GetID() string
 	IsCreated() bool
+	GetDeletionTimestamp() *metav1.Time
+	SetFinalizers([]string)
 }
 
 type SpecInterface interface {
@@ -38,7 +40,7 @@ type StatusInterface interface {
 }
 
 type Spec struct {
-	Data string
+	Data string `json:"data,omitempty"`
 }
 
 func (s *Spec) GetSum() []byte {

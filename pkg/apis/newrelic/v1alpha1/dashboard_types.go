@@ -3,32 +3,40 @@ package v1alpha1
 import (
 	"context"
 	"encoding/json"
-
 	"fmt"
 
 	"github.com/IBM/newrelic-cli/newrelic"
-	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ CRD = &Dashboard{}
-
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type DashboardList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-	Items           []Dashboard `json:"items"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
+// Dashboard is the Schema for the dashboards API
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:path=dashboards,scope=Namespaced
 type Dashboard struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 	Spec              Spec   `json:"spec"`
 	Status            Status `json:"status,omitempty"`
 }
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// DashboardList contains a list of Dashboard
+type DashboardList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []Dashboard `json:"items"`
+}
+
+func init() {
+	SchemeBuilder.Register(&Dashboard{}, &DashboardList{})
+}
+
+// Additional Code
+
+var _ CRD = &Dashboard{}
 
 // IsCreated specifies if the object has been created in new relic yet
 func (s *Dashboard) IsCreated() bool {
@@ -68,7 +76,6 @@ func (s *Dashboard) Delete(ctx context.Context) error {
 
 	rsp, _, err := client.Dashboards.DeleteByID(ctx, *id)
 	if rsp.StatusCode == 404 {
-		log.Warn(responseBodyToString(rsp))
 		return nil
 	}
 	err = handleError(rsp, err)
@@ -119,8 +126,4 @@ func listDashboards(ctx context.Context) ([]*newrelic.Dashboard, error) {
 	}
 
 	return list.Dashboards, nil
-}
-
-func init() {
-	SchemeBuilder.Register(&Dashboard{}, &DashboardList{})
 }

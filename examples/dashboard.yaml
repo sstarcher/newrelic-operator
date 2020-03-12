@@ -1,18 +1,4 @@
 apiVersion: "newrelic.shanestarcher.com/v1alpha1"
 kind: "Dashboard"
 metadata:
-  name: "google"
-spec:
-  Data: '{
-  "dashboard": {
-    "title": "Test",
-    "description": null,
-    "icon": "bar-chart",
-    "visibility": "all",
-    "editable": "editable_by_owner",
-    "metadata": {
-      "version": 1
-    },
-    "widgets": []
-   }
-}'
+  name: "example"

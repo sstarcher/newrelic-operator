@@ -2,9 +2,6 @@ package monitor
 
 import (
 	"context"
-	"time"
-
-	log "github.com/sirupsen/logrus"
 
 	newrelicv1alpha1 "github.com/sstarcher/newrelic-operator/pkg/apis/newrelic/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -12,20 +9,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var defaultRequeue = reconcile.Result{
-	Requeue:      true,
-	RequeueAfter: time.Minute * 5,
-}
-
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
+var log = logf.Log.WithName("controller_monitor")
 
 // Add creates a new Monitor Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -55,6 +45,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
+// blank assignment to verify that ReconcileMonitor implements reconcile.Reconciler
 var _ reconcile.Reconciler = &ReconcileMonitor{}
 
 // ReconcileMonitor reconciles a Monitor object
@@ -67,13 +58,11 @@ type ReconcileMonitor struct {
 
 // Reconcile reads that state of the cluster for a Monitor object and makes changes based on the state read
 // and what is in the Monitor.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
-// a Pod as an example
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileMonitor) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reconcileResult := reconcile.Result{}
+	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 
 	// Fetch the Monitor instance
 	instance := &newrelicv1alpha1.Monitor{}
@@ -83,42 +72,12 @@ func (r *ReconcileMonitor) Reconcile(request reconcile.Request) (reconcile.Resul
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			return reconcileResult, nil
+			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		return reconcileResult, err
+		return reconcile.Result{}, err
 	}
 
-	logger := log.WithFields(log.Fields{"type": "monitor", "name": request.Name, "namespace": request.Namespace})
-	ctx := newrelicv1alpha1.WithLogger(context.TODO(), logger)
-
-	if instance.GetDeletionTimestamp() != nil {
-		logger.Infof("delete")
-		err = instance.Delete(ctx)
-		if err != nil {
-			logger.Error(err)
-			reconcileResult = defaultRequeue
-		} else {
-			instance.SetFinalizers(nil)
-		}
-		return reconcile.Result{}, r.client.Update(ctx, instance)
-	} else if instance.IsCreated() {
-		if instance.HasChanged() {
-			logger.Infof("update")
-			err := instance.Update(ctx)
-			if err != nil {
-				logger.Error(err)
-				reconcileResult = defaultRequeue
-			}
-		}
-	} else {
-		logger.Info("create ")
-		err := instance.Create(ctx)
-		r.client.Create(ctx, instance)
-		if err != nil {
-			logger.Error(err)
-			reconcileResult = defaultRequeue
-		}
-	}
-	return reconcileResult, r.client.Update(ctx, instance)
+	reconcileResult := newrelicv1alpha1.DoReconcile(reqLogger, instance)
+	return reconcileResult, r.client.Update(context.TODO(), instance)
 }

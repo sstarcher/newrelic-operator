@@ -1,0 +1,7 @@
+apiVersion: newrelic.shanestarcher.com/v1alpha1
+kind: AlertChannel
+metadata:
+  name: example-alertchannel
+spec:
+  # Add fields here
+  size: 3

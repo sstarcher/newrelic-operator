@@ -1,12 +1,11 @@
-kind: ClusterRoleBinding
+kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: newrelic-operator-test
+  name: newrelic-operator
 subjects:
 - kind: ServiceAccount
-  name: newrelic-operator-test
-  namespace:  default
+  name: newrelic-operator
 roleRef:
-  kind: ClusterRole
-  name: newrelic-operator-test
+  kind: Role
+  name: newrelic-operator
   apiGroup: rbac.authorization.k8s.io

@@ -2,33 +2,18 @@ package v1alpha1
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/IBM/newrelic-cli/newrelic"
-	log "github.com/sirupsen/logrus"
+	"github.com/apex/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ CRD = &Monitor{}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type MonitorList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-	Items           []Monitor `json:"items"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type Monitor struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata"`
-	Spec              MonitorSpec   `json:"spec"`
-	Status            MonitorStatus `json:"status,omitempty"`
-}
-
+// MonitorSpec defines the desired state of Monitor
 type MonitorSpec struct {
 	Type          *string              `json:"type,omitempty"`
 	Frequency     *int64               `json:"frequency,omitempty"`
@@ -42,22 +27,44 @@ type MonitorSpec struct {
 	Conditions    []Conditions         `json:"conditions,omitempty"`
 }
 
-type MonitorStatus struct {
-	Status
-	Policies []int64 `json:"policies,omitempty"`
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// Monitor is the Schema for the monitors API
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:path=monitors,scope=Namespaced
+type Monitor struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata"`
+	Spec              MonitorSpec `json:"spec"`
+	Status            Status      `json:"status,omitempty"`
 }
 
-func (s MonitorStatus) IsCreated() bool {
-	return s.ID != nil
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// MonitorList contains a list of Monitor
+type MonitorList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []Monitor `json:"items"`
 }
 
-func (s MonitorStatus) GetSum() []byte {
-	return s.Hash
+func init() {
+	SchemeBuilder.Register(&Monitor{}, &MonitorList{})
 }
 
-func (s MonitorStatus) SetSum(data []byte) {
-	s.Hash = data
-}
+// Additional Code
+
+var _ CRD = &Monitor{}
+
+// MonitorType defines the available types for monitors
+type MonitorType string
+
+const (
+	typePing            MonitorType = "SIMPLE"
+	typeBrowser                     = "BROWSER"
+	typeScriptedBrowser             = "SCRIPT_BROWSER"
+	typeAPI                         = "SCRIPT_API"
+)
 
 type MonitorStatusString string
 
@@ -83,6 +90,7 @@ type Conditions struct {
 	RunbookURL *string `json:"runbookURL,omitempty"`
 }
 
+// TODO flatten this structure out
 type Script struct {
 	ScriptText *string `json:"scriptText,omitempty"`
 }
@@ -105,15 +113,14 @@ func (s *Monitor) HasChanged() bool {
 	return hasChanged(&s.Spec, &s.Status)
 }
 
-func (s *Monitor) toNewRelic() *newrelic.Monitor {
+func (s *Monitor) toNewRelic() (*newrelic.Monitor, error) {
 	data := &newrelic.Monitor{
-		Name:         &s.ObjectMeta.Name,
-		Type:         s.Spec.Type,
-		Frequency:    s.Spec.Frequency,
-		URI:          s.Spec.URI,
-		Locations:    s.Spec.Locations,
-		SLAThreshold: s.Spec.SLAThreshold,
-		Script:       &newrelic.Script{},
+		Name:      &s.ObjectMeta.Name,
+		Type:      s.Spec.Type,
+		Frequency: s.Spec.Frequency,
+		URI:       s.Spec.URI,
+		Locations: s.Spec.Locations,
+		Script:    &newrelic.Script{},
 		Options: newrelic.MonitorOptions{
 			ValidationString:       s.Spec.Options.ValidationString,
 			VerifySSL:              s.Spec.Options.VerifySSL,
@@ -122,9 +129,11 @@ func (s *Monitor) toNewRelic() *newrelic.Monitor {
 		},
 	}
 
-	if s.Spec.Script != nil {
-		data.Script.ScriptText = s.Spec.Script.ScriptText
-	}
+	// slaThreshold, err := strconv.ParseFloat(s.Spec.SLAThreshold, 64)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	data.SLAThreshold = s.Spec.SLAThreshold
 
 	if s.Spec.Status != nil {
 		status := s.Spec.Status.String()
@@ -132,7 +141,7 @@ func (s *Monitor) toNewRelic() *newrelic.Monitor {
 	}
 
 	if data.Type == nil {
-		val := "simple"
+		val := string(typePing)
 		data.Type = &val
 	}
 
@@ -153,12 +162,25 @@ func (s *Monitor) toNewRelic() *newrelic.Monitor {
 		data.Status = &val
 	}
 
-	return data
+	return data, nil
 }
 
 // Create in newrelic
 func (s *Monitor) Create(ctx context.Context) error {
-	data, rsp, err := clientSythetics.SyntheticsMonitors.Create(ctx, s.toNewRelic())
+	logger := GetLogger(ctx)
+
+	input, err := s.toNewRelic()
+	if err != nil {
+		s.Status.Info = err.Error()
+		return err
+	}
+
+	data, rsp, err := clientSythetics.SyntheticsMonitors.Create(ctx, input)
+	if rsp.StatusCode == 400 {
+		// TODO consider checking to improve error message
+		logger.Info("this may already exist")
+	}
+
 	err = handleError(rsp, err)
 	if err != nil {
 		s.Status.Info = err.Error()
@@ -167,9 +189,14 @@ func (s *Monitor) Create(ctx context.Context) error {
 
 	s.Status.ID = data.ID
 	s.Status.Info = "Created"
-	s.Status.Hash = s.Spec.GetSum()
 
 	s.SetFinalizers([]string{finalizer})
+
+	err = s.updateScript(ctx)
+	if err != nil {
+		s.Status.Info = err.Error()
+		return err
+	}
 
 	err = s.updateCondition(ctx)
 	if err != nil {
@@ -189,24 +216,9 @@ func (s *Monitor) Delete(ctx context.Context) error {
 		return fmt.Errorf("alert Policy object has not been created %s", s.ObjectMeta.Name)
 	}
 
-	if s.Status.Policies != nil {
-		for _, item := range s.Status.Policies {
-			rsp, err := client.AlertsConditions.DeleteByID(ctx, newrelic.ConditionSynthetics, item)
-			if rsp.StatusCode == 404 {
-				logger.Warnf("unable to find policy %v skipping deletion and moving on", item)
-				continue
-			}
-
-			err = handleError(rsp, err)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
 	rsp, err := clientSythetics.SyntheticsMonitors.DeleteByID(ctx, id)
 	if rsp.StatusCode == 404 {
-		logger.Warnf("unable to find %v skipping deletion and moving on", id)
+		logger.Info("unable to find so skipping deletion", "id", id)
 		return nil
 	}
 	err = handleError(rsp, err)
@@ -229,8 +241,11 @@ func (s *Monitor) GetID() string {
 func (s *Monitor) Update(ctx context.Context) error {
 	logger := GetLogger(ctx)
 
-	s.Status.Info = "Updated"
-	monitor := s.toNewRelic()
+	monitor, err := s.toNewRelic()
+	if err != nil {
+		s.Status.Info = err.Error()
+		return err
+	}
 
 	if s.Spec.ManageUpdates != nil && *s.Spec.ManageUpdates {
 		data, err := s.getCurrent(ctx)
@@ -240,14 +255,21 @@ func (s *Monitor) Update(ctx context.Context) error {
 		monitor.Status = data.Status
 	}
 
+	s.Status.Info = "Updated"
 	rsp, err := clientSythetics.SyntheticsMonitors.Update(ctx, monitor, s.Status.ID)
 	if rsp.StatusCode == 404 {
 		s.Status.ID = nil
-		logger.Warnf("id is missing recreating %", s.ObjectMeta.Name)
+		logger.Info("id is missing recreating", "name", s.ObjectMeta.Name)
 		return nil
 	}
 
 	err = handleError(rsp, err)
+	if err != nil {
+		s.Status.Info = err.Error()
+		return err
+	}
+
+	err = s.updateScript(ctx)
 	if err != nil {
 		s.Status.Info = err.Error()
 		return err
@@ -259,24 +281,20 @@ func (s *Monitor) Update(ctx context.Context) error {
 		return err
 	}
 
-	s.Status.Hash = s.Spec.GetSum()
+	return nil
+}
 
+func (s *Monitor) updateScript(ctx context.Context) error {
+	if s.Spec.Type != nil && strings.ToUpper(*s.Spec.Type) == typeAPI && s.Spec.Script != nil && s.Spec.Script.ScriptText != nil {
+		encoded := base64.StdEncoding.EncodeToString([]byte(*s.Spec.Script.ScriptText))
+		rsp, err := clientSythetics.SyntheticsScript.UpdateByID(ctx, &newrelic.Script{ScriptText: &encoded}, *s.Status.ID)
+		return handleError(rsp, err)
+	}
 	return nil
 }
 
 func (s *Monitor) updateCondition(ctx context.Context) error {
-	logger := GetLogger(ctx)
-
 	if s.Spec.Conditions != nil {
-		for _, item := range s.Status.Policies {
-			rsp, err := client.AlertsConditions.DeleteByID(ctx, newrelic.ConditionSynthetics, item)
-			err = handleErrorMessage("delete error %v", rsp, err)
-			if err != nil {
-				return err
-			}
-		}
-
-		s.Status.Policies = []int64{}
 		for _, item := range s.Spec.Conditions {
 			var failureName = "Check Failure"
 			var enabled = true
@@ -297,39 +315,37 @@ func (s *Monitor) updateCondition(ctx context.Context) error {
 				return err
 			}
 
-			data, rsp, err := client.AlertsConditions.Create(ctx, newrelic.ConditionSynthetics, cond, *policyID)
+			result, rsp, err := client.AlertsConditions.List(ctx, &newrelic.AlertsConditionsOptions{PolicyIDOptions: strconv.FormatInt(*policyID, 10)}, newrelic.ConditionSynthetics)
 			err = handleError(rsp, err)
 			if err != nil {
-				logger.Error(err)
-			} else {
-				s.Status.Policies = append(s.Status.Policies, *data.AlertsSyntheticsConditionEntity.AlertsSyntheticsCondition.ID)
+				s.Status.Info = err.Error()
+				return err
+			}
+
+			exists := false
+			if result != nil && result.AlertsSyntheticsConditionList != nil && result.AlertsSyntheticsConditionList.AlertsSyntheticsConditions != nil {
+				for _, key := range result.AlertsSyntheticsConditionList.AlertsSyntheticsConditions {
+					if *key.MonitorID == s.GetID() {
+						exists = true
+					}
+				}
+			}
+
+			if exists {
+				continue
+			}
+
+			_, rsp, err = client.AlertsConditions.Create(ctx, newrelic.ConditionSynthetics, cond, *policyID)
+			err = handleError(rsp, err)
+			if err != nil {
+				s.Status.Info = err.Error()
+				return err
 			}
 		}
 	}
 
 	return nil
 }
-
-// func (s *Monitor) deleteDuplicate(ctx context.Context) error {
-// 	data, rsp, err := clientSythetics.SyntheticsMonitors.ListAll(ctx, &newrelic.MonitorListOptions{})
-// 	err = handleError(rsp, err)
-// 	if err != nil {
-// 		s.Status.Info = err.Error()
-// 		return err
-// 	}
-
-// 	for _, item := range data.Monitors {
-// 		if s.Name == *item.Name {
-// 			rsp, err := clientSythetics.SyntheticsMonitors.DeleteByID(ctx, item.ID)
-// 			err = handleError(rsp, err)
-// 			if err != nil {
-// 				return err
-// 			}
-// 		}
-// 	}
-
-// 	return nil
-// }
 
 func (s *Monitor) getCurrent(ctx context.Context) (*newrelic.Monitor, error) {
 	data, rsp, err := clientSythetics.SyntheticsMonitors.GetByID(ctx, s.GetID())
@@ -364,8 +380,4 @@ func (s *Monitor) findPolicyID(ctx context.Context, name string) (*int64, error)
 	}
 
 	return id, nil
-}
-
-func init() {
-	SchemeBuilder.Register(&Monitor{}, &MonitorList{})
 }

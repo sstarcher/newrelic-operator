@@ -12,20 +12,15 @@ spec:
       labels:
         name: newrelic-operator
     spec:
-      serviceAccountName: newrelic-operator-test
+      serviceAccountName: newrelic-operator
       containers:
         - name: newrelic-operator
           # Replace this with the built image name
-          image: sstarcher/newrelic-operator:latest
-          ports:
-          - containerPort: 60000
-            name: metrics
+          image: REPLACE_IMAGE
           command:
           - newrelic-operator
           imagePullPolicy: Always
           env:
-            - name: NEW_RELIC_APIKEY
-              value: REPLACE_ME_NEW_RELIC_APIKEY
             - name: WATCH_NAMESPACE
               valueFrom:
                 fieldRef:

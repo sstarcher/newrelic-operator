@@ -6,22 +6,21 @@ import (
 	"fmt"
 
 	"github.com/IBM/newrelic-cli/newrelic"
-	log "github.com/sirupsen/logrus"
+	"github.com/apex/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ CRD = &AlertPolicy{}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type AlertPolicyList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-	Items           []AlertPolicy `json:"items"`
+// AlertPolicySpec defines the desired state of AlertPolicy
+type AlertPolicySpec struct {
+	IncidentPreference string   `json:"incident_preference,omitempty"`
+	Channels           []string `json:"channels,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// AlertPolicy is the Schema for the alertpolicies API
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:path=alertpolicies,scope=Namespaced
 type AlertPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -29,10 +28,22 @@ type AlertPolicy struct {
 	Status            Status          `json:"status,omitempty"`
 }
 
-type AlertPolicySpec struct {
-	IncidentPreference string   `json:"incident_preference,omitempty"`
-	Channels           []string `json:"channels,omitempty"`
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// AlertPolicyList contains a list of AlertPolicy
+type AlertPolicyList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []AlertPolicy `json:"items"`
 }
+
+func init() {
+	SchemeBuilder.Register(&AlertPolicy{}, &AlertPolicyList{})
+}
+
+// Additional Code
+
+var _ CRD = &AlertPolicy{}
 
 func (s AlertPolicySpec) GetSum() []byte {
 	b, err := json.Marshal(s)
@@ -85,7 +96,7 @@ func (s *AlertPolicy) Delete(ctx context.Context) error {
 
 	rsp, err := client.AlertsPolicies.DeleteByID(ctx, *id)
 	if rsp.StatusCode == 404 {
-		logger.Warnf("unable to find %v skipping deletion and moving on", id)
+		logger.Info("unable to find id, skipping deletion", "id", id)
 		return nil
 	}
 	err = handleError(rsp, err)
@@ -123,7 +134,7 @@ func (s *AlertPolicy) Update(ctx context.Context) error {
 	data, rsp, err := client.AlertsPolicies.Update(ctx, data, *id)
 	if rsp.StatusCode == 404 {
 		s.Status.ID = nil
-		logger.Warnf("id is missing recreating %s", s.ObjectMeta.Name)
+		logger.Info("id is missing recreating", "name", s.ObjectMeta.Name)
 		return nil
 	}
 
@@ -165,7 +176,7 @@ func (s *AlertPolicy) addChannels(ctx context.Context) error {
 				}
 			}
 			if !found {
-				logger.Warnf("unable to find %s", channel)
+				logger.Info("unable to find", "channel", channel)
 			}
 		}
 
@@ -177,8 +188,4 @@ func (s *AlertPolicy) addChannels(ctx context.Context) error {
 		}
 	}
 	return nil
-}
-
-func init() {
-	SchemeBuilder.Register(&AlertPolicy{}, &AlertPolicyList{})
 }

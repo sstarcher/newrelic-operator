@@ -4,5 +4,5 @@ metadata:
   name: "example"
 spec:
   configuration:
-    recipients: test@google.com
-  type: email
+    recipients: "example@example.com"
+    include_json_attachment: "true"

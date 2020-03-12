@@ -1,14 +1,15 @@
-module github.com/sstarcher/newrelic-operator/newrelic-operator
+module github.com/sstarcher/newrelic-operator
 
 go 1.13
 
 require (
 	github.com/IBM/newrelic-cli v0.1.8
 	github.com/apex/log v1.1.2
+	github.com/cenkalti/backoff v2.1.1+incompatible
 	github.com/go-logr/logr v0.1.0
 	github.com/operator-framework/operator-sdk v0.15.2
 	github.com/spf13/pflag v1.0.5
-	github.com/sstarcher/newrelic-cli v0.1.4
+	github.com/sstarcher/newrelic-cli v0.1.4 // indirect
 	k8s.io/api v0.0.0
 	k8s.io/apimachinery v0.0.0
 	k8s.io/client-go v12.0.0+incompatible

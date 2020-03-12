@@ -1,5 +1,7 @@
-deploy
 main
+.env
+build/bin
+
 # Temporary Build Files
 build/_output
 build/_test

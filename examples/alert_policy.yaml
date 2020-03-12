@@ -1,8 +1,6 @@
 apiVersion: "newrelic.shanestarcher.com/v1alpha1"
 kind: "AlertPolicy"
 metadata:
-  name: "google"
+  name: "example"
 spec:
-  incident_preference: PER_CONDITION # Required PER_POLICY, PER_CONDITION, PER_CONDITION_AND_TARGET
-  channels:
-  - example
+  incident_preference: test

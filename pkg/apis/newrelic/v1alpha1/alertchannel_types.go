@@ -7,22 +7,23 @@ import (
 	"fmt"
 
 	"github.com/IBM/newrelic-cli/newrelic"
-	log "github.com/sirupsen/logrus"
+	"github.com/apex/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ CRD = &AlertChannel{}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type AlertChannelList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-	Items           []AlertChannel `json:"items"`
+// AlertChannelSpec defines the desired state of AlertChannel
+type AlertChannelSpec struct {
+	// TODO don't require setting of the type
+	Type          string   `json:"type,omitempty"`
+	Configuration data     `json:"configuration,omitempty"`
+	Policies      []string `json:"policies,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// AlertChannel is the Schema for the alertchannels API
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:path=alertchannels,scope=Namespaced
 type AlertChannel struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -30,14 +31,24 @@ type AlertChannel struct {
 	Status            Status           `json:"status,omitempty"`
 }
 
-type data map[string]string
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-type AlertChannelSpec struct {
-	// TODO don't require setting of the type
-	Type          string   `json:"type,omitempty"`
-	Configuration data     `json:"configuration,omitempty"`
-	Policies      []string `json:"policies,omitempty"`
+// AlertChannelList contains a list of AlertChannel
+type AlertChannelList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []AlertChannel `json:"items"`
 }
+
+func init() {
+	SchemeBuilder.Register(&AlertChannel{}, &AlertChannelList{})
+}
+
+// Additional code
+
+var _ CRD = &AlertChannel{}
+
+type data map[string]string
 
 func (s AlertChannelSpec) GetSum() []byte {
 	b, err := json.Marshal(s)
@@ -105,7 +116,6 @@ func (s *AlertChannel) Delete(ctx context.Context) error {
 	}
 	rsp, err := client.AlertsChannels.DeleteByID(ctx, *id)
 	if rsp.StatusCode == 404 {
-		log.Warn(responseBodyToString(rsp))
 		return nil
 	}
 	err = handleError(rsp, err)
@@ -133,8 +143,4 @@ func (s *AlertChannel) Signature() string {
 func (s *AlertChannel) Update(ctx context.Context) error {
 	// API does not list this as being updatable
 	return nil
-}
-
-func init() {
-	SchemeBuilder.Register(&AlertChannel{}, &AlertChannelList{})
 }

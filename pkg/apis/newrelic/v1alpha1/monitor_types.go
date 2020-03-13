@@ -166,13 +166,13 @@ func (s *Monitor) toNewRelic() (*newrelic.Monitor, error) {
 }
 
 // Create in newrelic
-func (s *Monitor) Create(ctx context.Context) error {
+func (s *Monitor) Create(ctx context.Context) bool {
 	logger := GetLogger(ctx)
 
 	input, err := s.toNewRelic()
 	if err != nil {
 		s.Status.Info = err.Error()
-		return err
+		return true
 	}
 
 	data, rsp, err := clientSythetics.SyntheticsMonitors.Create(ctx, input)
@@ -184,7 +184,7 @@ func (s *Monitor) Create(ctx context.Context) error {
 	err = handleError(rsp, err)
 	if err != nil {
 		s.Status.Info = err.Error()
-		return err
+		return true
 	}
 
 	s.Status.ID = data.ID
@@ -195,38 +195,39 @@ func (s *Monitor) Create(ctx context.Context) error {
 	err = s.updateScript(ctx)
 	if err != nil {
 		s.Status.Info = err.Error()
-		return err
+		return true
 	}
 
 	err = s.updateCondition(ctx)
 	if err != nil {
 		s.Status.Info = err.Error()
-		return err
+		return true
 	}
 
-	return nil
+	return false
 }
 
 // Delete in newrelic
-func (s *Monitor) Delete(ctx context.Context) error {
+func (s *Monitor) Delete(ctx context.Context) bool {
 	logger := GetLogger(ctx)
 
 	id := s.Status.ID
 	if id == nil {
-		return fmt.Errorf("alert Policy object has not been created %s", s.ObjectMeta.Name)
+		logger.Info("object does not exist")
+		return false
 	}
 
 	rsp, err := clientSythetics.SyntheticsMonitors.DeleteByID(ctx, id)
 	if rsp.StatusCode == 404 {
 		logger.Info("unable to find so skipping deletion", "id", id)
-		return nil
+		return false
 	}
 	err = handleError(rsp, err)
 	if err != nil {
-		return err
+		return true
 	}
 
-	return nil
+	return false
 }
 
 // GetID for the new relic object
@@ -238,19 +239,19 @@ func (s *Monitor) GetID() string {
 }
 
 // Update object in newrelic
-func (s *Monitor) Update(ctx context.Context) error {
+func (s *Monitor) Update(ctx context.Context) bool {
 	logger := GetLogger(ctx)
 
 	monitor, err := s.toNewRelic()
 	if err != nil {
 		s.Status.Info = err.Error()
-		return err
+		return true
 	}
 
 	if s.Spec.ManageUpdates != nil && *s.Spec.ManageUpdates {
 		data, err := s.getCurrent(ctx)
 		if err != nil {
-			return err
+			return true
 		}
 		monitor.Status = data.Status
 	}
@@ -260,28 +261,26 @@ func (s *Monitor) Update(ctx context.Context) error {
 	if rsp.StatusCode == 404 {
 		s.Status.ID = nil
 		logger.Info("id is missing recreating", "name", s.ObjectMeta.Name)
-		return nil
+		return false
 	}
 
-	err = handleError(rsp, err)
-	if err != nil {
-		s.Status.Info = err.Error()
-		return err
+	if s.Status.Handle(ctx, handleError(rsp, err), "failed") {
+		logger.Info("duh fuck")
+		logger.Info(s.Status.Info)
+		return true
 	}
 
 	err = s.updateScript(ctx)
-	if err != nil {
-		s.Status.Info = err.Error()
-		return err
+	if s.Status.Handle(ctx, err, "failed on script") {
+		return true
 	}
 
 	err = s.updateCondition(ctx)
-	if err != nil {
-		s.Status.Info = err.Error()
-		return err
+	if s.Status.Handle(ctx, err, "failed on condition") {
+		return true
 	}
 
-	return nil
+	return false
 }
 
 func (s *Monitor) updateScript(ctx context.Context) error {

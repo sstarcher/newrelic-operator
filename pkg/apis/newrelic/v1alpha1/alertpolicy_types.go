@@ -3,7 +3,6 @@ package v1alpha1
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/IBM/newrelic-cli/newrelic"
 	"github.com/apex/log"
@@ -64,7 +63,7 @@ func (s *AlertPolicy) HasChanged() bool {
 }
 
 // Create in newrelic
-func (s *AlertPolicy) Create(ctx context.Context) error {
+func (s *AlertPolicy) Create(ctx context.Context) bool {
 	data := &newrelic.AlertsPolicyEntity{
 		AlertsPolicy: &newrelic.AlertsPolicy{
 			Name:               &s.ObjectMeta.Name,
@@ -76,35 +75,41 @@ func (s *AlertPolicy) Create(ctx context.Context) error {
 	err = handleError(rsp, err)
 	if err != nil {
 		s.Status.Info = err.Error()
-		return err
+		return true
 	}
 
 	createdInt(*data.AlertsPolicy.ID, &s.Status, &s.Spec)
 	s.SetFinalizers([]string{finalizer})
 
-	return s.addChannels(ctx)
+	err = s.addChannels(ctx)
+	if err != nil {
+		s.Status.Info = err.Error()
+		return true
+	}
+	return false
 }
 
 // Delete in newrelic
-func (s *AlertPolicy) Delete(ctx context.Context) error {
+func (s *AlertPolicy) Delete(ctx context.Context) bool {
 	logger := GetLogger(ctx)
 
 	id := s.Status.GetID()
 	if id == nil {
-		return fmt.Errorf("alert Policy object has not been created %s", s.ObjectMeta.Name)
+		logger.Info("object does not exist")
+		return false
 	}
 
 	rsp, err := client.AlertsPolicies.DeleteByID(ctx, *id)
 	if rsp.StatusCode == 404 {
 		logger.Info("unable to find id, skipping deletion", "id", id)
-		return nil
+		return false
 	}
 	err = handleError(rsp, err)
 	if err != nil {
-		return err
+		return true
 	}
 
-	return nil
+	return false
 }
 
 // GetID for the new relic object
@@ -116,7 +121,7 @@ func (s *AlertPolicy) GetID() string {
 }
 
 // Update object in newrelic
-func (s *AlertPolicy) Update(ctx context.Context) error {
+func (s *AlertPolicy) Update(ctx context.Context) bool {
 	logger := GetLogger(ctx)
 	// TODO update is creating extra objects
 	data := &newrelic.AlertsPolicyEntity{
@@ -128,30 +133,32 @@ func (s *AlertPolicy) Update(ctx context.Context) error {
 
 	id := s.Status.GetID()
 	if id == nil {
-		return fmt.Errorf("alert Policy object has not been created %s", s.ObjectMeta.Name)
+		s.Status.ID = nil
+		logger.Info("object does not exist")
+		return true
 	}
 
 	data, rsp, err := client.AlertsPolicies.Update(ctx, data, *id)
 	if rsp.StatusCode == 404 {
 		s.Status.ID = nil
-		logger.Info("id is missing recreating", "name", s.ObjectMeta.Name)
-		return nil
+		logger.Info("id is missing recreating")
+		return false
 	}
 
 	err = handleError(rsp, err)
 	if err != nil {
 		s.Status.Info = err.Error()
-		return err
+		return true
 	}
 
 	err = s.addChannels(ctx)
 	if err != nil {
 		s.Status.Info = err.Error()
-		return err
+		return true
 	}
 
 	update(&s.Spec, &s.Status)
-	return nil
+	return false
 }
 
 func (s *AlertPolicy) addChannels(ctx context.Context) error {

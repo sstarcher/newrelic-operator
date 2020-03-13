@@ -83,9 +83,9 @@ func (s *AlertChannel) validate() error {
 }
 
 // Create in newrelic
-func (s *AlertChannel) Create(ctx context.Context) error {
+func (s *AlertChannel) Create(ctx context.Context) bool {
 	if err := s.validate(); err != nil {
-		return err
+		return true
 	}
 
 	data := &newrelic.AlertsChannelEntity{
@@ -100,30 +100,32 @@ func (s *AlertChannel) Create(ctx context.Context) error {
 	err = handleError(rsp, err)
 	if err != nil {
 		s.Status.Info = err.Error()
-		return err
+		return true
 	}
 
 	createdInt(*channels.AlertsChannels[0].ID, &s.Status, &s.Spec)
 	s.SetFinalizers([]string{finalizer})
-	return nil
+	return false
 }
 
 // Delete in newrelic
-func (s *AlertChannel) Delete(ctx context.Context) error {
+func (s *AlertChannel) Delete(ctx context.Context) bool {
+	logger := GetLogger(ctx)
 	id := s.Status.GetID()
 	if id == nil {
-		return fmt.Errorf("alert channel object has not been created %s", s.ObjectMeta.Name)
+		logger.Info("object does not exist")
+		return false
 	}
 	rsp, err := client.AlertsChannels.DeleteByID(ctx, *id)
 	if rsp.StatusCode == 404 {
-		return nil
+		return false
 	}
 	err = handleError(rsp, err)
 	if err != nil {
-		return err
+		return true
 	}
 
-	return nil
+	return false
 }
 
 // GetID for the new relic object
@@ -140,7 +142,7 @@ func (s *AlertChannel) Signature() string {
 }
 
 // Update object in newrelic
-func (s *AlertChannel) Update(ctx context.Context) error {
+func (s *AlertChannel) Update(ctx context.Context) bool {
 	// API does not list this as being updatable
-	return nil
+	return false
 }

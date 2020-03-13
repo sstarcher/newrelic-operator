@@ -47,26 +47,23 @@ func DoReconcile(log logr.Logger, instance CRD) reconcile.Result {
 	ctx := WithLogger(context.TODO(), &log)
 
 	if instance.GetDeletionTimestamp() != nil {
-		log.Info("delete")
-		err := instance.Delete(ctx)
-		if err != nil {
-			log.Error(err, "failed to delete")
+		log.WithValues("action", "delete")
+		log.Info("")
+		if instance.Delete(ctx) {
 			reconcileResult = DefaultRequeue
 		} else {
 			instance.SetFinalizers(nil)
 		}
 	} else if instance.IsCreated() {
-		log.Info("update")
-		err := instance.Update(ctx)
-		if err != nil {
-			log.Error(err, "failed to update")
+		log.WithValues("action", "update")
+		log.Info("")
+		if instance.Update(ctx) {
 			reconcileResult = DefaultRequeue
 		}
 	} else {
-		log.Info("create")
-		err := instance.Create(ctx)
-		if err != nil {
-			log.Error(err, "failed to create")
+		log.WithValues("action", "create")
+		log.Info("")
+		if instance.Create(ctx) {
 			reconcileResult = DefaultRequeue
 		}
 	}

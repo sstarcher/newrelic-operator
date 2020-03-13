@@ -3,7 +3,6 @@ package v1alpha1
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/IBM/newrelic-cli/newrelic"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,42 +47,45 @@ func (s *Dashboard) HasChanged() bool {
 }
 
 // Create in newrelic
-func (s *Dashboard) Create(ctx context.Context) error {
+func (s *Dashboard) Create(ctx context.Context) bool {
 	rsp, data, err := client.Dashboards.Create(ctx, s.Spec.Data)
 	err = handleError(rsp, err)
 	if err != nil {
 		s.Status.Info = err.Error()
-		return err
+		return true
 	}
 
 	var result newrelic.CreateDashboardResponse
 	err = json.Unmarshal(data, &result)
 	if err != nil {
-		return err
+		return true
 	}
 
 	createdInt(*result.Dashboard.ID, &s.Status, &s.Spec)
 	s.SetFinalizers([]string{finalizer})
-	return nil
+	return false
 }
 
 // Delete in newrelic
-func (s *Dashboard) Delete(ctx context.Context) error {
+func (s *Dashboard) Delete(ctx context.Context) bool {
+	logger := GetLogger(ctx)
+
 	id := s.Status.GetID()
 	if id == nil {
-		return fmt.Errorf("dashboard object has not been created %s", s.ObjectMeta.Name)
+		logger.Info("object does not exist")
+		return false
 	}
 
 	rsp, _, err := client.Dashboards.DeleteByID(ctx, *id)
 	if rsp.StatusCode == 404 {
-		return nil
+		return false
 	}
 	err = handleError(rsp, err)
 	if err != nil {
-		return err
+		return true
 	}
 
-	return nil
+	return false
 }
 
 // GetID for the new relic object
@@ -95,21 +97,23 @@ func (s *Dashboard) GetID() string {
 }
 
 // Update object in newrelic
-func (s *Dashboard) Update(ctx context.Context) error {
+func (s *Dashboard) Update(ctx context.Context) bool {
+	logger := GetLogger(ctx)
 	id := s.Status.GetID()
 	if id == nil {
-		return fmt.Errorf("dashboard object has not been created %s", s.ObjectMeta.Name)
+		logger.Info("object has already been deleted")
+		return false
 	}
 
 	rsp, _, err := client.Dashboards.Update(ctx, s.Spec.Data, *id)
 	err = handleError(rsp, err)
 	if err != nil {
 		s.Status.Info = err.Error()
-		return err
+		return true
 	}
 
 	update(&s.Spec, &s.Status)
-	return nil
+	return false
 }
 
 func listDashboards(ctx context.Context) ([]*newrelic.Dashboard, error) {

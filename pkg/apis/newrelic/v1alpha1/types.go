@@ -21,9 +21,9 @@ type Data struct {
 
 type CRD interface {
 	HasChanged() bool
-	Create(context.Context) error
-	Update(context.Context) error
-	Delete(context.Context) error
+	Create(context.Context) bool
+	Update(context.Context) bool
+	Delete(context.Context) bool
 	GetID() string
 	IsCreated() bool
 	GetDeletionTimestamp() *metav1.Time
@@ -37,6 +37,7 @@ type SpecInterface interface {
 type StatusInterface interface {
 	GetSum() []byte
 	SetSum([]byte)
+	Handle(context.Context, error, string) bool
 }
 
 type Spec struct {
@@ -73,6 +74,22 @@ func (s Status) GetID() *int64 {
 func (s Status) SetID(id int64) {
 	str := strconv.FormatInt(id, 10)
 	s.ID = &str
+}
+
+// Handle returns true if we should requeue
+func (s Status) Handle(ctx context.Context, err error, msg string) bool {
+	logger := GetLogger(ctx)
+
+	if err != nil {
+		s.Info = msg
+		if err != nil {
+			s.Info = s.Info + " " + err.Error()
+		}
+		logger.Info(s.Info)
+		logger.Info("we set stuff")
+		return true
+	}
+	return false
 }
 
 func (s Status) SetSum(data []byte) {

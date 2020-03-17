@@ -2,8 +2,7 @@ package v1alpha1
 
 import (
 	"context"
-	"crypto/sha256"
-	"reflect"
+	"fmt"
 	"strconv"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,32 +19,24 @@ type Data struct {
 }
 
 type CRD interface {
-	HasChanged() bool
 	Create(context.Context) bool
 	Update(context.Context) bool
 	Delete(context.Context) bool
-	GetID() string
 	IsCreated() bool
 	GetDeletionTimestamp() *metav1.Time
 	SetFinalizers([]string)
 }
 
 type SpecInterface interface {
-	GetSum() []byte
 }
 
 type StatusInterface interface {
-	GetSum() []byte
-	SetSum([]byte)
-	Handle(context.Context, error, string) bool
+	HandleOnErrorMessage(context.Context, error, string) bool
+	HandleOnError(context.Context, error) bool
 }
 
 type Spec struct {
 	Data string `json:"data,omitempty"`
-}
-
-func (s *Spec) GetSum() []byte {
-	return sha256.New().Sum([]byte(s.Data))
 }
 
 type Status struct {
@@ -55,68 +46,40 @@ type Status struct {
 }
 
 // IsCreated let us know if the dashboard exists
-func (s Status) IsCreated() bool {
+func (s *Status) IsCreated() bool {
 	return s.ID != nil
 }
 
-func (s Status) GetSum() []byte {
-	return s.Hash
-}
-
-func (s Status) GetID() *int64 {
+func (s *Status) GetID() *int {
 	if s.ID == nil {
 		return nil
 	}
-	id, _ := strconv.ParseInt(*s.ID, 10, 64)
+	id, _ := strconv.Atoi(*s.ID)
 	return &id
 }
 
-func (s Status) SetID(id int64) {
-	str := strconv.FormatInt(id, 10)
+func (s *Status) SetID(id int) {
+	str := string(id)
 	s.ID = &str
 }
 
-// Handle returns true if we should requeue
-func (s Status) Handle(ctx context.Context, err error, msg string) bool {
+// HandleOnErrorMessage returns true if an error had occured
+func (s *Status) HandleOnErrorMessage(ctx context.Context, err error, msg string) bool {
+	if msg != "" {
+		err = fmt.Errorf("%s %v", msg, err)
+	}
+
+	return s.HandleOnError(ctx, err)
+}
+
+// HandleOnError returns true if an error had occured
+func (s *Status) HandleOnError(ctx context.Context, err error) bool {
 	logger := GetLogger(ctx)
 
 	if err != nil {
-		s.Info = msg
-		if err != nil {
-			s.Info = s.Info + " " + err.Error()
-		}
+		s.Info = err.Error()
 		logger.Info(s.Info)
-		logger.Info("we set stuff")
 		return true
 	}
 	return false
-}
-
-func (s Status) SetSum(data []byte) {
-	s.Hash = data
-}
-
-// HasChanged detects if the data is out of sync with the hash
-func hasChanged(spec SpecInterface, status SpecInterface) bool {
-	return !reflect.DeepEqual(spec.GetSum(), status.GetSum())
-}
-
-// Update the hash
-func update(spec SpecInterface, status StatusInterface) {
-	status.SetSum(spec.GetSum())
-}
-
-// Update the hash
-func created(id string, status *Status, spec SpecInterface) {
-	status.ID = &id
-	status.Info = "Created"
-	update(spec, status)
-}
-
-func createdInt(id int64, status *Status, spec SpecInterface) {
-	created(strconv.FormatInt(id, 10), status, spec)
-}
-
-func sum(data []byte) []byte {
-	return sha256.New().Sum(data)
 }

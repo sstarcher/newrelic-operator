@@ -2,9 +2,8 @@ package v1alpha1
 
 import (
 	"context"
-	"encoding/json"
 
-	"github.com/IBM/newrelic-cli/newrelic"
+	"github.com/newrelic/newrelic-client-go/pkg/dashboards"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -16,8 +15,8 @@ import (
 type Dashboard struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
-	Spec              Spec   `json:"spec"`
-	Status            Status `json:"status,omitempty"`
+	Spec              DashboardSpec `json:"spec"`
+	Status            Status        `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -35,6 +34,17 @@ func init() {
 
 // Additional Code
 
+// DashboardSpec defines the structure of the dashboard for new relic
+type DashboardSpec struct {
+	Title string `json:"title,omitempty"`
+	Icon  string `json:"icon,omitempty"`
+	// TODO
+	// Widgets    []dashboards.DashboardWidget `json:"widgets,omitempty"`
+	Visibility string `json:"visibility,omitempty"`
+	Editable   string `json:"editable,omitempty"`
+	// Filter      `json:"filter,omitempty"`
+}
+
 var _ CRD = &Dashboard{}
 
 // IsCreated specifies if the object has been created in new relic yet
@@ -42,26 +52,35 @@ func (s *Dashboard) IsCreated() bool {
 	return s.Status.IsCreated()
 }
 
-func (s *Dashboard) HasChanged() bool {
-	return hasChanged(&s.Spec, &s.Status)
+func (s *Dashboard) toNewRelic() (*dashboards.Dashboard, error) {
+	data := &dashboards.Dashboard{
+		Title:      s.Spec.Title,
+		Icon:       s.Spec.Icon,
+		Visibility: dashboards.VisibilityType(s.Spec.Visibility),
+		Editable:   dashboards.EditableType(s.Spec.Editable),
+	}
+
+	if s.Status.ID != nil {
+		data.ID = int(*s.Status.GetID())
+	}
+
+	return data, nil
 }
 
 // Create in newrelic
 func (s *Dashboard) Create(ctx context.Context) bool {
-	rsp, data, err := client.Dashboards.Create(ctx, s.Spec.Data)
-	err = handleError(rsp, err)
-	if err != nil {
-		s.Status.Info = err.Error()
+	input, err := s.toNewRelic()
+	if s.Status.HandleOnError(ctx, err) {
 		return true
 	}
 
-	var result newrelic.CreateDashboardResponse
-	err = json.Unmarshal(data, &result)
-	if err != nil {
+	rsp, err := client.Dashboards.CreateDashboard(*input)
+	if s.Status.HandleOnError(ctx, err) {
 		return true
 	}
 
-	createdInt(*result.Dashboard.ID, &s.Status, &s.Spec)
+	s.Status.Info = "Created"
+	s.Status.SetID(rsp.ID)
 	s.SetFinalizers([]string{finalizer})
 	return false
 }
@@ -72,62 +91,29 @@ func (s *Dashboard) Delete(ctx context.Context) bool {
 
 	id := s.Status.GetID()
 	if id == nil {
-		logger.Info("object does not exist")
+		logger.Info("skipping deletion ID is missing from object")
 		return false
 	}
 
-	rsp, _, err := client.Dashboards.DeleteByID(ctx, *id)
-	if rsp.StatusCode == 404 {
-		return false
-	}
-	err = handleError(rsp, err)
-	if err != nil {
+	_, err := client.Dashboards.DeleteDashboard(int(*id))
+	if s.Status.HandleOnError(ctx, err) {
 		return true
 	}
 
 	return false
-}
-
-// GetID for the new relic object
-func (s *Dashboard) GetID() string {
-	if s.Status.ID != nil {
-		return *s.Status.ID
-	}
-	return "nil"
 }
 
 // Update object in newrelic
 func (s *Dashboard) Update(ctx context.Context) bool {
-	logger := GetLogger(ctx)
-	id := s.Status.GetID()
-	if id == nil {
-		logger.Info("object has already been deleted")
-		return false
-	}
-
-	rsp, _, err := client.Dashboards.Update(ctx, s.Spec.Data, *id)
-	err = handleError(rsp, err)
-	if err != nil {
-		s.Status.Info = err.Error()
+	input, err := s.toNewRelic()
+	if s.Status.HandleOnError(ctx, err) {
 		return true
 	}
 
-	update(&s.Spec, &s.Status)
+	_, err = client.Dashboards.UpdateDashboard(*input)
+	if s.Status.HandleOnError(ctx, err) {
+		return true
+	}
+
 	return false
-}
-
-func listDashboards(ctx context.Context) ([]*newrelic.Dashboard, error) {
-	rsp, data, err := client.Dashboards.ListAll(ctx, nil)
-	err = handleError(rsp, err)
-	if err != nil {
-		return nil, err
-	}
-
-	var list newrelic.DashboardList
-	err = json.Unmarshal(data, &list)
-	if err != nil {
-		return nil, err
-	}
-
-	return list.Dashboards, nil
 }

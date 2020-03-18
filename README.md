@@ -33,7 +33,5 @@ __pre-alpha__ This is a work in progress to use the [operator-framework](https:/
 
 
 ## Todo
-* Replacing resources does not cleanup the original
 * Validate resources prior to calling API
-* Cleanup on errors
 * Need to support secret information like slack configuration and the ability to refer and re-use

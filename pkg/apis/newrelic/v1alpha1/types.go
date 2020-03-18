@@ -59,13 +59,13 @@ func (s *Status) GetID() *int {
 }
 
 func (s *Status) SetID(id int) {
-	str := string(id)
+	str := strconv.Itoa(id)
 	s.ID = &str
 }
 
 // HandleOnErrorMessage returns true if an error had occured
 func (s *Status) HandleOnErrorMessage(ctx context.Context, err error, msg string) bool {
-	if msg != "" {
+	if err != nil && msg != "" {
 		err = fmt.Errorf("%s %v", msg, err)
 	}
 

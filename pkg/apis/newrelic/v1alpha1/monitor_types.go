@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,7 +19,7 @@ type MonitorSpec struct {
 	URI           *string              `json:"uri,omitempty"`
 	Locations     []*string            `json:"locations,omitempty"`
 	Status        *MonitorStatusString `json:"status,omitempty"`
-	SLAThreshold  *string              `json:"slaThreshold,omitempty"`
+	SLAThreshold  *float64             `json:"slaThreshold,omitempty"`
 	ManageUpdates *bool                `json:"manageUpdates,omitempty"`
 	Options       MonitorOptions       `json:"options,omitempty"`
 	Script        *Script              `json:"script,omitempty"`
@@ -141,11 +140,7 @@ func (s *Monitor) toNewRelic() (*synthetics.Monitor, error) {
 	}
 
 	if s.Spec.SLAThreshold != nil {
-		s, err := strconv.ParseFloat(*s.Spec.SLAThreshold, 64)
-		if err != nil {
-			return nil, err
-		}
-		data.SLAThreshold = s
+		data.SLAThreshold = *s.Spec.SLAThreshold
 	} else {
 		data.SLAThreshold = 1.0
 	}
@@ -168,14 +163,12 @@ func (s *Monitor) toNewRelic() (*synthetics.Monitor, error) {
 // Create in newrelic
 func (s *Monitor) Create(ctx context.Context) bool {
 	input, err := s.toNewRelic()
-	if err != nil {
-		s.Status.Info = err.Error()
+	if s.Status.HandleOnError(ctx, err) {
 		return true
 	}
 
 	data, err := client.Synthetics.CreateMonitor(*input)
-	if err != nil {
-		s.Status.Info = err.Error()
+	if s.Status.HandleOnError(ctx, err) {
 		return true
 	}
 
@@ -184,14 +177,12 @@ func (s *Monitor) Create(ctx context.Context) bool {
 	s.SetFinalizers([]string{finalizer})
 
 	err = s.updateScript(ctx)
-	if err != nil {
-		s.Status.Info = err.Error()
+	if s.Status.HandleOnError(ctx, err) {
 		return true
 	}
 
 	err = s.updateCondition(ctx)
-	if err != nil {
-		s.Status.Info = err.Error()
+	if s.Status.HandleOnError(ctx, err) {
 		return true
 	}
 
@@ -218,8 +209,7 @@ func (s *Monitor) Delete(ctx context.Context) bool {
 // Update object in newrelic
 func (s *Monitor) Update(ctx context.Context) bool {
 	monitor, err := s.toNewRelic()
-	if err != nil {
-		s.Status.Info = err.Error()
+	if s.Status.HandleOnError(ctx, err) {
 		return true
 	}
 
@@ -287,12 +277,17 @@ func (s *Monitor) updateCondition(ctx context.Context) error {
 				continue
 			}
 
-			_, err = client.Alerts.CreateSyntheticsCondition(*policyID, alerts.SyntheticsCondition{
-				Name:       "Check Failure",
-				MonitorID:  *s.Status.ID,
-				RunbookURL: *item.RunbookURL,
-				Enabled:    true,
-			})
+			data := alerts.SyntheticsCondition{
+				Name:      "Check Failure",
+				MonitorID: *s.Status.ID,
+				Enabled:   true,
+			}
+
+			if item.RunbookURL != nil {
+				data.RunbookURL = *item.RunbookURL
+			}
+
+			_, err = client.Alerts.CreateSyntheticsCondition(*policyID, data)
 			if err != nil {
 				return err
 			}
@@ -307,28 +302,34 @@ func (s *Monitor) getCurrent(ctx context.Context) (*synthetics.Monitor, error) {
 		return nil, errors.New("missing id")
 	}
 
-	data, err := client.Synthetics.GetMonitor(string(*id))
-	if err != nil {
-		s.Status.Info = err.Error()
-		return nil, err
-	}
-	return data, nil
+	return client.Synthetics.GetMonitor(string(*id))
 }
 
 func (s *Monitor) findPolicyID(ctx context.Context, name string) (*int, error) {
+	logger := GetLogger(ctx)
 	policies, err := client.Alerts.ListPolicies(&alerts.ListPoliciesParams{Name: name})
 	if err != nil {
-		s.Status.Info = err.Error()
 		return nil, err
 	}
 
-	if len(policies) == 1 {
-		return &policies[0].ID, nil
+	var id *int
+	for _, item := range policies {
+		if item.Name == name {
+			if id != nil {
+				for _, item := range policies {
+					if item.Name == name {
+						logger.V(1).Info(fmt.Sprintf("duplicate policies %s %d", item.Name, item.ID))
+					}
+				}
+				err = fmt.Errorf("expected a policy search by name to only return 1 result, but found multiple for %s", name)
+				return nil, err
+			}
+			id = &item.ID
+		}
 	}
 
-	if len(policies) > 0 {
-		err = fmt.Errorf("expected a policy search by name to only return 1 result, but found multiple for %s", name)
-		return nil, err
+	if id != nil {
+		return id, nil
 	}
 
 	return nil, fmt.Errorf("unable to find policy %s", name)

@@ -415,7 +415,7 @@ func (in *MonitorSpec) DeepCopyInto(out *MonitorSpec) {
 	}
 	if in.SLAThreshold != nil {
 		in, out := &in.SLAThreshold, &out.SLAThreshold
-		*out = new(string)
+		*out = new(float64)
 		**out = **in
 	}
 	if in.ManageUpdates != nil {

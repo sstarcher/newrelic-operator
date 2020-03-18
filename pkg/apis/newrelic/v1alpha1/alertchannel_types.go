@@ -75,6 +75,8 @@ func (s *AlertChannel) toNewRelic() (*alerts.Channel, error) {
 
 	switch data.Type {
 	// TODO more validation
+	case "":
+		return nil, errors.New("no valid type specified")
 	case alerts.ChannelTypes.Slack:
 		if _, ok := s.Spec.Configuration["channel"]; !ok {
 			return nil, errors.New("slack notifications require channel configuration")

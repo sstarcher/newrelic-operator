@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/cenkalti/backoff v2.1.1+incompatible
 	github.com/go-logr/logr v0.1.0
-	github.com/newrelic/newrelic-client-go v0.16.0
+	github.com/newrelic/newrelic-client-go v0.17.1
 
 )
 

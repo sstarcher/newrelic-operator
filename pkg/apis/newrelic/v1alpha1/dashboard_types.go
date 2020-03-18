@@ -36,8 +36,7 @@ func init() {
 
 // DashboardSpec defines the structure of the dashboard for new relic
 type DashboardSpec struct {
-	Title string `json:"title,omitempty"`
-	Icon  string `json:"icon,omitempty"`
+	Icon string `json:"icon,omitempty"`
 	// TODO
 	// Widgets    []dashboards.DashboardWidget `json:"widgets,omitempty"`
 	Visibility string `json:"visibility,omitempty"`
@@ -54,8 +53,8 @@ func (s *Dashboard) IsCreated() bool {
 
 func (s *Dashboard) toNewRelic() (*dashboards.Dashboard, error) {
 	data := &dashboards.Dashboard{
-		Title:      s.Spec.Title,
-		Icon:       s.Spec.Icon,
+		Title:      s.GetName(),
+		Icon:       dashboards.DashboardIconType(s.Spec.Icon),
 		Visibility: dashboards.VisibilityType(s.Spec.Visibility),
 		Editable:   dashboards.EditableType(s.Spec.Editable),
 	}
@@ -64,6 +63,15 @@ func (s *Dashboard) toNewRelic() (*dashboards.Dashboard, error) {
 		data.ID = int(*s.Status.GetID())
 	}
 
+	if data.Visibility == "" {
+		data.Visibility = dashboards.VisibilityTypes.All
+	}
+
+	if data.Editable == "" {
+		data.Editable = dashboards.EditableTypes.ReadOnly
+	}
+
+	data.Metadata.Version = 1
 	return data, nil
 }
 

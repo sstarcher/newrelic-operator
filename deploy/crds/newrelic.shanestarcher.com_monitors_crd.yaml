@@ -67,7 +67,7 @@ spec:
                   type: string
               type: object
             slaThreshold:
-              type: float64
+              type: string
             status:
               type: string
             type:
@@ -76,23 +76,14 @@ spec:
               type: string
           type: object
         status:
-          description: MonitorStatus defines the observed state of Monitor
           properties:
-            policies:
-              items:
-                format: int64
-                type: integer
-              type: array
-            status:
-              properties:
-                hash:
-                  format: byte
-                  type: string
-                id:
-                  type: string
-                info:
-                  type: string
-              type: object
+            hash:
+              format: byte
+              type: string
+            id:
+              type: string
+            info:
+              type: string
           type: object
       required:
       - metadata

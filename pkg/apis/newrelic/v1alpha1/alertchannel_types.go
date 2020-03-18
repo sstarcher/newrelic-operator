@@ -4,10 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 
-	"github.com/IBM/newrelic-cli/newrelic"
-	"github.com/apex/log"
+	"github.com/newrelic/newrelic-client-go/pkg/alerts"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -50,97 +48,84 @@ var _ CRD = &AlertChannel{}
 
 type data map[string]string
 
-func (s AlertChannelSpec) GetSum() []byte {
-	b, err := json.Marshal(s)
-	if err != nil {
-		log.Error("unable to marshal Alert Channel")
-		return nil
-	}
-	return sum(b)
-}
-
 // IsCreated specifies if the object has been created in new relic yet
 func (s *AlertChannel) IsCreated() bool {
 	return s.Status.IsCreated()
 }
 
-func (s *AlertChannel) HasChanged() bool {
-	return false
-}
+func (s *AlertChannel) toNewRelic() (*alerts.Channel, error) {
+	data := alerts.Channel{
+		Name: s.GetObjectMeta().GetName(),
+		Type: alerts.ChannelType(s.Spec.Type),
+	}
 
-func (s *AlertChannel) validate() error {
-	slackType := newrelic.AlertsChannelType(s.Spec.Type)
-	switch slackType {
-	case newrelic.ChannelBySlack:
+	bytes, err := json.Marshal(s.Spec.Configuration)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(bytes, &data.Configuration)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.Status.ID != nil {
+		data.ID = int(*s.Status.GetID())
+	}
+
+	switch data.Type {
+	// TODO more validation
+	case "":
+		return nil, errors.New("no valid type specified")
+	case alerts.ChannelTypes.Slack:
 		if _, ok := s.Spec.Configuration["channel"]; !ok {
-			return errors.New("slack notifications require channel configuration")
+			return nil, errors.New("slack notifications require channel configuration")
 		}
 		if _, ok := s.Spec.Configuration["url"]; !ok {
-			return errors.New("slack notifications require url configuration")
+			return nil, errors.New("slack notifications require url configuration")
 		}
 	}
-	return nil
+
+	return &data, nil
 }
 
 // Create in newrelic
-func (s *AlertChannel) Create(ctx context.Context) error {
-	if err := s.validate(); err != nil {
-		return err
+func (s *AlertChannel) Create(ctx context.Context) bool {
+	input, err := s.toNewRelic()
+	if s.Status.HandleOnError(ctx, err) {
+		return true
 	}
 
-	data := &newrelic.AlertsChannelEntity{
-		AlertsChannel: &newrelic.AlertsChannel{
-			Name:          &s.ObjectMeta.Name,
-			Type:          newrelic.AlertsChannelType(s.Spec.Type),
-			Configuration: s.Spec.Configuration,
-		},
+	data, err := client.Alerts.CreateChannel(*input)
+	if s.Status.HandleOnError(ctx, err) {
+		return true
 	}
 
-	channels, rsp, err := client.AlertsChannels.Create(ctx, data)
-	err = handleError(rsp, err)
-	if err != nil {
-		s.Status.Info = err.Error()
-		return err
-	}
-
-	createdInt(*channels.AlertsChannels[0].ID, &s.Status, &s.Spec)
+	s.Status.Info = "Created"
+	s.Status.SetID(data.ID)
 	s.SetFinalizers([]string{finalizer})
-	return nil
+	return false
 }
 
 // Delete in newrelic
-func (s *AlertChannel) Delete(ctx context.Context) error {
+func (s *AlertChannel) Delete(ctx context.Context) bool {
+	logger := GetLogger(ctx)
 	id := s.Status.GetID()
 	if id == nil {
-		return fmt.Errorf("alert channel object has not been created %s", s.ObjectMeta.Name)
-	}
-	rsp, err := client.AlertsChannels.DeleteByID(ctx, *id)
-	if rsp.StatusCode == 404 {
-		return nil
-	}
-	err = handleError(rsp, err)
-	if err != nil {
-		return err
+		logger.Info("object does not exist")
+		return false
 	}
 
-	return nil
-}
-
-// GetID for the new relic object
-func (s *AlertChannel) GetID() string {
-	if s.Status.ID != nil {
-		return *s.Status.ID
+	_, err := client.Alerts.DeleteChannel(int(*id))
+	if s.Status.HandleOnError(ctx, err) {
+		return true
 	}
-	return "nil"
-}
 
-// Signature for the CRD
-func (s *AlertChannel) Signature() string {
-	return fmt.Sprintf("%s %s/%s", s.TypeMeta.Kind, s.Namespace, s.Name)
+	return false
 }
 
 // Update object in newrelic
-func (s *AlertChannel) Update(ctx context.Context) error {
+func (s *AlertChannel) Update(ctx context.Context) bool {
 	// API does not list this as being updatable
-	return nil
+	return false
 }

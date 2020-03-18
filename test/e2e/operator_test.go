@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/newrelic/newrelic-client-go/pkg/alerts"
 	"github.com/sstarcher/newrelic-operator/pkg/apis"
 	v1alpha1 "github.com/sstarcher/newrelic-operator/pkg/apis/newrelic/v1alpha1"
 
-	"github.com/IBM/newrelic-cli/newrelic"
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
 )
@@ -86,7 +86,7 @@ func Monitor(t *testing.T) {
 		TypeMeta:   NewTypeMeta("AlertPolicy"),
 		ObjectMeta: NewObjectMeta("policy", namespace),
 		Spec: v1alpha1.AlertPolicySpec{
-			IncidentPreference: string(newrelic.IncidentPerCondition),
+			IncidentPreference: string(alerts.IncidentPreferenceTypes.PerCondition),
 		},
 	}
 

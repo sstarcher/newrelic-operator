@@ -29,8 +29,17 @@ spec:
         metadata:
           type: object
         spec:
+          description: DashboardSpec defines the structure of the dashboard for new
+            relic
           properties:
-            data:
+            editable:
+              type: string
+            icon:
+              type: string
+            title:
+              type: string
+            visibility:
+              description: TODO Widgets    []dashboards.DashboardWidget `json:"widgets,omitempty"`
               type: string
           type: object
         status:

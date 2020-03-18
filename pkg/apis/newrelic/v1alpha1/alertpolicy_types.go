@@ -2,11 +2,9 @@ package v1alpha1
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
+	"errors"
 
-	"github.com/IBM/newrelic-cli/newrelic"
-	"github.com/apex/log"
+	"github.com/newrelic/newrelic-client-go/pkg/alerts"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -45,145 +43,114 @@ func init() {
 
 var _ CRD = &AlertPolicy{}
 
-func (s AlertPolicySpec) GetSum() []byte {
-	b, err := json.Marshal(s)
-	if err != nil {
-		log.Error("unable to marshal AlertPolicy")
-		return nil
-	}
-	return sum(b)
-}
-
 // IsCreated specifies if the object has been created in new relic yet
 func (s *AlertPolicy) IsCreated() bool {
 	return s.Status.IsCreated()
 }
 
-func (s *AlertPolicy) HasChanged() bool {
-	return hasChanged(&s.Spec, &s.Status)
+func (s *AlertPolicy) toNewRelic() (*alerts.Policy, error) {
+	data := alerts.Policy{
+		Name:               s.GetObjectMeta().GetName(),
+		IncidentPreference: alerts.IncidentPreferenceType(s.Spec.IncidentPreference),
+	}
+
+	if s.Status.ID != nil {
+		data.ID = int(*s.Status.GetID())
+	}
+	return &data, nil
 }
 
 // Create in newrelic
-func (s *AlertPolicy) Create(ctx context.Context) error {
-	data := &newrelic.AlertsPolicyEntity{
-		AlertsPolicy: &newrelic.AlertsPolicy{
-			Name:               &s.ObjectMeta.Name,
-			IncidentPreference: newrelic.IncidentPerPolicy,
-		},
+func (s *AlertPolicy) Create(ctx context.Context) bool {
+	input, err := s.toNewRelic()
+	if s.Status.HandleOnError(ctx, err) {
+		return true
 	}
 
-	data, rsp, err := client.AlertsPolicies.Create(ctx, data)
-	err = handleError(rsp, err)
-	if err != nil {
-		s.Status.Info = err.Error()
-		return err
+	data, err := client.Alerts.CreatePolicy(*input)
+	if s.Status.HandleOnError(ctx, err) {
+		return true
 	}
 
-	createdInt(*data.AlertsPolicy.ID, &s.Status, &s.Spec)
+	s.Status.SetID(data.ID)
 	s.SetFinalizers([]string{finalizer})
 
-	return s.addChannels(ctx)
+	err = s.addChannels(ctx)
+	if s.Status.HandleOnError(ctx, err) {
+		return true
+	}
+	return false
 }
 
 // Delete in newrelic
-func (s *AlertPolicy) Delete(ctx context.Context) error {
+func (s *AlertPolicy) Delete(ctx context.Context) bool {
 	logger := GetLogger(ctx)
 
 	id := s.Status.GetID()
 	if id == nil {
-		return fmt.Errorf("alert Policy object has not been created %s", s.ObjectMeta.Name)
+		logger.Info("object does not exist")
+		return false
 	}
 
-	rsp, err := client.AlertsPolicies.DeleteByID(ctx, *id)
-	if rsp.StatusCode == 404 {
-		logger.Info("unable to find id, skipping deletion", "id", id)
-		return nil
-	}
-	err = handleError(rsp, err)
-	if err != nil {
-		return err
+	_, err := client.Alerts.DeletePolicy(int(*id))
+	if s.Status.HandleOnError(ctx, err) {
+		return true
 	}
 
-	return nil
-}
-
-// GetID for the new relic object
-func (s *AlertPolicy) GetID() string {
-	if s.Status.ID != nil {
-		return *s.Status.ID
-	}
-	return "nil"
+	return false
 }
 
 // Update object in newrelic
-func (s *AlertPolicy) Update(ctx context.Context) error {
-	logger := GetLogger(ctx)
-	// TODO update is creating extra objects
-	data := &newrelic.AlertsPolicyEntity{
-		AlertsPolicy: &newrelic.AlertsPolicy{
-			Name:               &s.ObjectMeta.Name,
-			IncidentPreference: newrelic.IncidentPreferenceOption(s.Spec.IncidentPreference),
-		},
+func (s *AlertPolicy) Update(ctx context.Context) bool {
+	input, err := s.toNewRelic()
+	if s.Status.HandleOnError(ctx, err) {
+		return true
 	}
 
-	id := s.Status.GetID()
-	if id == nil {
-		return fmt.Errorf("alert Policy object has not been created %s", s.ObjectMeta.Name)
-	}
-
-	data, rsp, err := client.AlertsPolicies.Update(ctx, data, *id)
-	if rsp.StatusCode == 404 {
-		s.Status.ID = nil
-		logger.Info("id is missing recreating", "name", s.ObjectMeta.Name)
-		return nil
-	}
-
-	err = handleError(rsp, err)
-	if err != nil {
-		s.Status.Info = err.Error()
-		return err
+	_, err = client.Alerts.UpdatePolicy(*input)
+	if s.Status.HandleOnError(ctx, err) {
+		return true
 	}
 
 	err = s.addChannels(ctx)
-	if err != nil {
-		s.Status.Info = err.Error()
-		return err
+	if s.Status.HandleOnError(ctx, err) {
+		return true
 	}
 
-	update(&s.Spec, &s.Status)
-	return nil
+	return false
 }
 
 func (s *AlertPolicy) addChannels(ctx context.Context) error {
 	logger := GetLogger(ctx)
 
 	if s.Spec.Channels != nil {
-		channels, rsp, err := client.AlertsChannels.ListAll(ctx, nil)
-		err = handleError(rsp, err)
+		channels, err := client.Alerts.ListChannels()
 		if err != nil {
-			s.Status.Info = err.Error()
 			return err
 		}
 
-		channelIds := []*int64{}
+		channelIds := []int{}
 		for _, channel := range s.Spec.Channels {
 			found := false
-			for _, alertChannel := range channels.AlertsChannels {
-				if channel == *alertChannel.Name {
-					channelIds = append(channelIds, alertChannel.ID)
+			for _, item := range channels {
+				if channel == item.Name {
+					channelIds = append(channelIds, item.ID)
 					found = true
 					break
 				}
 			}
 			if !found {
-				logger.Info("unable to find", "channel", channel)
+				logger.Info("unable to find channel", "channel", channel)
 			}
 		}
 
-		rsp, err = client.AlertsChannels.UpdatePolicyChannels(ctx, *s.Status.GetID(), channelIds)
-		err = handleError(rsp, err)
+		id := s.Status.GetID()
+		if id == nil {
+			return errors.New("id is nil")
+		}
+
+		_, err = client.Alerts.UpdatePolicyChannels(int(*id), channelIds)
 		if err != nil {
-			s.Status.Info = err.Error()
 			return err
 		}
 	}

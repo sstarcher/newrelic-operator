@@ -10,12 +10,10 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-
-    - run: ls -larth
+    - uses: actions/checkout@v2
 
     - name: Build the Docker image
-      run: docker build -t image Dockerfile
-
+      run: docker build -t image .
 
     - uses: homoluctus/gitrivy@v1.0.0
       with:

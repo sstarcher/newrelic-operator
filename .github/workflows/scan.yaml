@@ -10,10 +10,12 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
+
+    - run: ls -larth
+
     - name: Build the Docker image
       run: docker build -t image Dockerfile
 
-    - run: ls -larth
 
     - uses: homoluctus/gitrivy@v1.0.0
       with:

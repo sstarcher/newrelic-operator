@@ -1,0 +1,28 @@
+name: Build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Build the Docker image
+      run: docker build -t image .
+
+    - uses: homoluctus/gitrivy@v1.0.0
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        image: image
+
+    - uses: anchore/scan-action@master
+      with:
+        image-reference: image
+
+    - uses: phonito/phonito-scanner-action@master
+      with:
+        image: image
+        phonito-token: ${{ secrets.PHONITO_TOKEN }}

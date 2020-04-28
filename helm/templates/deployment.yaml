@@ -35,7 +35,13 @@ spec:
               fieldRef:
                 fieldPath: metadata.name
           - name: WATCH_NAMESPACE
+          {{- if hasKey .Values "watchNamespace" }}
             value: {{ .Values.watchNamespace }}
+          {{- else }}
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          {{- end }}
           envFrom:
           - secretRef:
               name: {{ include "newrelic-operator.fullname" . }}

@@ -85,4 +85,4 @@ tolerations: []
 affinity: {}
 
 # The Kubernetes namespace to watch, "" is for all namespaces
-watchNamespace: ""
+# watchNamespace: ""

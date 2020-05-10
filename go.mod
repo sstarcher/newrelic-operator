@@ -5,15 +5,13 @@ go 1.14
 require (
 	github.com/cenkalti/backoff v2.1.1+incompatible
 	github.com/go-logr/logr v0.1.0
-	github.com/newrelic/newrelic-client-go v0.20.1
+	github.com/newrelic/newrelic-client-go v0.23.1
 
 )
 
 require (
-	github.com/kamilsk/retry/v4 v4.7.2 // indirect
 	github.com/operator-framework/operator-sdk v0.15.2
 	github.com/spf13/pflag v1.0.5
-	github.com/sstarcher/helm-release v0.1.1-0.20200405001536-e1ed52696af2 // indirect
 	k8s.io/api v0.0.0
 	k8s.io/apimachinery v0.0.0
 	k8s.io/client-go v12.0.0+incompatible

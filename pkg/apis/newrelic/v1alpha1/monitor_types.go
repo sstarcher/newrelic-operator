@@ -251,6 +251,7 @@ func (s *Monitor) updateScript(ctx context.Context) error {
 }
 
 func (s *Monitor) updateCondition(ctx context.Context) error {
+	// TODO remove what exists, but is no longer in the CR
 	if s.Spec.Conditions != nil {
 		for _, item := range s.Spec.Conditions {
 			policyID, err := s.findPolicyID(ctx, item.PolicyName)

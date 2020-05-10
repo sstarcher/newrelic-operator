@@ -109,6 +109,9 @@ func (s *AlertPolicy) Update(ctx context.Context) bool {
 
 	_, err = client.Alerts.UpdatePolicy(*input)
 	if s.Status.HandleOnError(ctx, err) {
+		if err.Error() == "resource not found" {
+			s.Status.ID = nil
+		}
 		return true
 	}
 

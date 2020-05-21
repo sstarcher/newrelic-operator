@@ -67,7 +67,8 @@ spec:
                   type: string
               type: object
             slaThreshold:
-              type: float64
+              type: number
+              format: float
             status:
               type: string
             type:
